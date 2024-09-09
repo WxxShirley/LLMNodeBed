@@ -1,0 +1,16 @@
+*.pyc
+/.vs/
+/datasets
+/datasets/
+
+.DS_Store
+
+.idea
+/.idea/
+/.idea
+*/__pycache__
+
+__pycache__
+/__pycache__
+/.vscode
+.vscode
