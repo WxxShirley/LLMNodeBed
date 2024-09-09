@@ -49,7 +49,7 @@ python embedding.py --encoder_type=LLM --llm_name=Llama3-8B --use_cls=0
 python main.py --device=cpu 
 
 # Run GNNs with e5-large generated embeddings on CPU
-python main.py --device=cpu --emb_type=LM --emb_model=e5-large --gnn=GCN 
+python main.py --device=cpu --emb_type=LM --emb_model=e5-large --gnn_type=GCN 
 ```
 
 Feel free to explore, experiment, and contribute! 🚀
