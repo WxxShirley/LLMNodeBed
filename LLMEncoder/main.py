@@ -17,6 +17,11 @@ def set_seed(seed):
     torch.backends.cudnn.deterministic = True
 
 
+def array_mean_std(numbers):
+    array = np.array(numbers)
+    return np.round(np.mean(array), 3), np.round(np.std(array), 3)
+
+
 def gnn_train():
     gnn_model.train()
     optimizer.zero_grad()
@@ -63,6 +68,7 @@ if __name__ == "__main__":
     parser.add_argument("--patience", type=int, default=50)
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--seed", type=int, default=1)
+    parser.add_argument("--run_times", type=int, default=5)
 
     args = parser.parse_args()
     print(args)
@@ -79,41 +85,55 @@ if __name__ == "__main__":
     if len(graph_data.train_mask) == 10:
         graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
     
-    gnn_model = GNNEncoder(
-        input_dim=graph_data.x.shape[1],
-        hidden_dim=args.hidden_dim, 
-        output_dim=len(graph_data.label_name),
-        n_layers=args.n_layers,
-        gnn_type=args.gnn_type,
-        dropout=args.dropout
-    ).to(device)
-    print(gnn_model)
-
-    optimizer = torch.optim.Adam(gnn_model.parameters(), lr=args.learning_rate)
     
-    best_eval_acc = best_test_acc = 0.0
-    best_eval_f1 = best_test_f1 = 0.0
-    timer, counter = [], 0
+    final_acc_list, final_f1_list = [], []
 
-    for epoch in range(1, args.epochs+1):
-        st_time = time.time()
-        cur_loss = gnn_train()
-        train_acc, val_acc, test_acc = gnn_test()[0]
-        train_f1, val_f1, test_f1 = gnn_test()[1]
+    for i in range(1, args.run_times+1):
+        gnn_model = GNNEncoder(
+            input_dim=graph_data.x.shape[1],
+            hidden_dim=args.hidden_dim, 
+            output_dim=len(graph_data.label_name),
+            n_layers=args.n_layers,
+            gnn_type=args.gnn_type,
+            dropout=args.dropout
+        ).to(device)
+        if i == 1:
+            trainable_params = sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)
+            print(f"[GNN] Number of parameters {trainable_params}")
 
-        if val_acc > best_eval_acc:
-            best_eval_acc = val_acc
-            best_test_acc = test_acc
-            counter = 0
-        else:
-            counter += 1
-        if val_f1 > best_eval_f1:
-            best_eval_f1 = val_f1
-            best_test_f1 = test_f1
+        optimizer = torch.optim.Adam(gnn_model.parameters(), lr=args.learning_rate)
+    
+        best_eval_acc = best_test_acc = 0.0
+        best_eval_f1 = best_test_f1 = 0.0
+        timer, counter = [], 0
+
+        for epoch in range(1, args.epochs+1):
+            st_time = time.time()
+            cur_loss = gnn_train()
+            train_acc, val_acc, test_acc = gnn_test()[0]
+            train_f1, val_f1, test_f1 = gnn_test()[1]
+            
+            if val_acc > best_eval_acc:
+                best_eval_acc = val_acc
+                best_test_acc = test_acc
+                counter = 0
+            else:
+                counter += 1
+            if val_f1 > best_eval_f1:
+                best_eval_f1 = val_f1
+                best_test_f1 = test_f1
         
-        print(f"Epoch {epoch:03d}    Train acc {train_acc:.3f} Val acc {val_acc:.3f} Test acc {test_acc:.3f}  Train F1 {train_f1:.3f} Val F1 {val_f1:.3f} Test F1 {test_f1:.4f}")
-        timer.append(time.time() - st_time)
-        if counter >= args.patience:
-            break
+            print(f"Epoch {epoch:03d}    Train acc {train_acc:.3f} Val acc {val_acc:.3f} Test acc {test_acc:.3f}  Train F1 {train_f1:.3f} Val F1 {val_f1:.3f} Test F1 {test_f1:.4f}")
+            timer.append(time.time() - st_time)
+            
+            # Early stopping
+            if counter >= args.patience:
+                break
     
-    print(f'[Final] Test Acc {best_test_acc:.3f}  Test F1 {best_test_f1:.3f} Avg Time/Epoch {sum(timer)/len(timer):.4f}s')
+        print(f'[Times {i}] Test Acc {best_test_acc:.3f}  Test F1 {best_test_f1:.3f} Avg Time/Epoch {sum(timer)/len(timer):.4f}s\n')
+        final_acc_list.append(best_test_acc)
+        final_f1_list.append(best_test_f1)
+    
+    acc_mean, acc_std = array_mean_std(final_acc_list)
+    f1_mean, f1_std = array_mean_std(final_f1_list)
+    print(f"\n[Final] Acc {acc_mean}+-{acc_std}  F1 {f1_mean}+-{f1_std}")
