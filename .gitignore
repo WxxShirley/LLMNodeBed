@@ -2,6 +2,8 @@
 /.vs/
 /datasets
 /datasets/
+/results
+/results/
 
 .DS_Store
 

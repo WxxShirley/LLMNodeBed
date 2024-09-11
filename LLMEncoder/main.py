@@ -59,16 +59,18 @@ if __name__ == "__main__":
     # GNN configuration
     parser.add_argument("--gnn_type", type=str, default="GCN", choices=["GCN", "GAT", "SAGE", "GIN", "TransformerConv"])
     parser.add_argument("--n_layers", type=int, default=2)
-    parser.add_argument("--hidden_dim", type=int, default=512)
+    parser.add_argument("--hidden_dim", type=int, default=256)
     parser.add_argument("--dropout", type=float, default=0.5)
 
     # Learning configuration
-    parser.add_argument("--learning_rate", type=float, default=1e-3)
-    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--learning_rate", type=float, default=1e-2)
+    parser.add_argument("--epochs", type=int, default=500)
     parser.add_argument("--patience", type=int, default=50)
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--run_times", type=int, default=5)
+
+    parser.add_argument("--write_result", type=int, default=1)
 
     args = parser.parse_args()
     print(args)
@@ -87,6 +89,10 @@ if __name__ == "__main__":
     
     
     final_acc_list, final_f1_list = [], []
+
+    if args.write_result:
+        os.makedirs("../results/LLMEncoder", exist_ok=True)
+        write_file = open(f"../results/LLMEncoder/{args.dataset}.csv", mode='a', newline='')
 
     for i in range(1, args.run_times+1):
         gnn_model = GNNEncoder(
@@ -137,3 +143,8 @@ if __name__ == "__main__":
     acc_mean, acc_std = array_mean_std(final_acc_list)
     f1_mean, f1_std = array_mean_std(final_f1_list)
     print(f"\n[Final] Acc {acc_mean}+-{acc_std}  F1 {f1_mean}+-{f1_std}")
+
+    if args.write_result:
+        import csv
+        writer = csv.writer(write_file)
+        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.emb_type, args.emb_model if args.emb_type != "shallow" else "-", f"{acc_mean}+-{acc_std}", f"{f1_mean}+-{f1_std}"])
