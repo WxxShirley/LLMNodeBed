@@ -1,10 +1,17 @@
-# Do We Really Need LLMs for Graph Tasks? A Benchmark
+# (tentative) Do We Really Need LLMs for Graph Tasks? A Benchmark
 
 This is our ongoing project to explore the effectiveness of Large Language Models (LLMs) for graph tasks using two popular approaches:
 
 * **LLM as Encoder**: Utilize LLMs' text representation capabilities to generate node embeddings. Compare these with embeddings from smaller language models and shallow methods.
 * **LLM as Predictor**: Harness LLMs' reasoning abilities to directly predict node labels. Evaluate this in both supervised and zero-shot scenarios.
 
+
+## Work in Progress 
+
+### **RQ1 How Effective Are LLMs as Enhancers?**
+
+- [ ] GNN as Backbones - investigate the effectiveness of LLM's generated embeddings, compare it with small-scale LMs and shallow embedding
+- [ ] TAPE and OFA - investigate i) the quality of LLM's generated text for downstream tasks, ii) the effectiveness of LLM's generated embeddings 
 
 
 ## Dataset & Setup
