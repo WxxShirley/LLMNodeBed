@@ -147,4 +147,4 @@ if __name__ == "__main__":
     if args.write_result:
         import csv
         writer = csv.writer(write_file)
-        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.emb_type, args.emb_model if args.emb_type != "shallow" else "-", f"{acc_mean}+-{acc_std}", f"{f1_mean}+-{f1_std}"])
+        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.emb_type, args.emb_model if args.emb_type != "shallow" else "-", f"{acc_mean}+-{acc_std}", f"{f1_mean}+-{f1_std}", trainable_params])
