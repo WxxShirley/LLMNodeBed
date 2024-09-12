@@ -81,7 +81,7 @@ if __name__ == "__main__":
     graph_data = torch.load(f"../datasets/{args.dataset}.pt").to(device)
     if args.emb_type != "shallow":
         assert os.path.exists(f"../datasets/{args.emb_model}/{args.dataset}.pt")
-        node_feat = torch.load(f"../datasets/{args.emb_model}/{args.dataset}.pt").to(device).type(torch.float)
+        node_feat = torch.load(f"../datasets/{args.emb_model}/{args.dataset}.pt", map_location=device).to(device).type(torch.float)
         graph_data.x = node_feat
     
     if len(graph_data.train_mask) == 10:
