@@ -44,6 +44,9 @@ def llm_forward(data):
     text_embeddings = []
     with torch.no_grad():
         for text in tqdm(data.raw_texts, desc="Generating LLM Embedding"):
+            # fix len(text) == 0 for the 153-th entry in Instagram dataset
+            if len(text) == 0:
+                text = "Empty text"
             encoded_input = llm_tokenizer(text, add_special_tokens=False, return_tensors="pt", padding=True, truncation=True, max_length=512).to(device)
             outputs = llm_model(**encoded_input, output_hidden_states=True)
             if args.use_cls:
