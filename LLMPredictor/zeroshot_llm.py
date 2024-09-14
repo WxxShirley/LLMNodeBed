@@ -315,8 +315,6 @@ if __name__ == '__main__':
     test_mask = data.test_mask[0] if len(data.test_mask) == 10 else data.test_mask
     test_indexes = torch.where(test_mask == True)[0].cpu().numpy().tolist()
 
-    test_indexes=[89,37,11,38,666,727]
-
     # create csv file
     os.makedirs("../results/LLMPredictor/llm_zero_shot/prediction", exist_ok=True)
     write_file = open(f"../results/LLMPredictor/llm_zero_shot/prediction/{args.dataset}.csv", 'a',newline='')
