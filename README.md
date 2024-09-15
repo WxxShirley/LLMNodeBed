@@ -10,7 +10,15 @@ This is our ongoing project to explore the effectiveness of Large Language Model
 
 ### **RQ1 How Effective Are LLMs as Enhancers?**
 
-- [ ] GNN as Backbones - investigate the effectiveness of LLM's generated embeddings, compare it with small-scale LMs and shallow embedding
+- [x] GNN as Backbones - investigate the effectiveness of LLM's generated embeddings, compare it with small-scale LMs and shallow embedding
+
+  * **Performance** LLMs generate higher-quality text representations compared to LMs, as shown by improved results in downstream task, i.e., node classification. This is especially evident in datasets such as arXiv, which includes 40 categories and demands highly discriminative node representations.
+  * **Efficiency** Although LLMs improve performance in textual representation learning, they require extensive encoding time. For example, encoding arXiv data with LLMs (13B parameters) takes over **5 hours**. Additionally, LLMs necessitate a high embedding dimension (4096 or 5120), whereas LMs can reduce memory usage significantly with dimensions of 768 or 1024.
+
+![performance](README.assets/LLMEncoder/gnn_performance.jpg)
+![performance2](README.assets/LLMEncoder/gnn_performance2.jpg)
+![cost](README.assets/LLMEncoder/emb_time.jpg)
+
 - [ ] TAPE and OFA - investigate i) the quality of LLM's generated text for downstream tasks, ii) the effectiveness of LLM's generated embeddings 
 
 
