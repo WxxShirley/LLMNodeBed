@@ -212,7 +212,9 @@ if __name__ == '__main__':
 
     # create csv file
     os.makedirs("../results/LLMPredictor/llm_zero_shot", exist_ok=True)
-    file_path = f"../results/LLMPredictor/llm_zero_shot/{args.dataset}.csv"
+    os.makedirs("../results/LLMPredictor/llm_zero_shot/qwen-vl-max-0809", exist_ok=True)
+    os.makedirs("../results/LLMPredictor/llm_zero_shot/qwen-turbo", exist_ok=True)
+    file_path = f"../results/LLMPredictor/llm_zero_shot/{args.model_name}/{args.dataset}.csv"
     write_file = open(file_path, 'a', newline='')
 
     #make predictions
