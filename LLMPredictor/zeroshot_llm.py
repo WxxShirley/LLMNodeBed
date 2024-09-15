@@ -56,52 +56,52 @@ ARXIV_Q = """Question: Which of the following
         Use the words in this part to answer me, not the explanation part bellow.
         
         Here are the explanation of each category:
-        'cs.AI (Artificial Intelligence)',
+        'arxiv cs ai (Artificial Intelligence)',
 
-        'cs.AR (Hardware Architecture)',
+        'arxiv cs ar (Hardware Architecture)',
         
-        'cs.CC (Computational Complexity)',
+        'arxiv cs cc (Computational Complexity)',
         
-        'cs.CE (Computational Engineering, Finance, and Science)',
-        'cs.CG (Computational Geometry)',
+        'arxiv cs ce (Computational Engineering, Finance, and Science)',
+        'arxiv cs cg (Computational Geometry)',
         
-        'cs.CL (Computation and Language)',
+        'arxiv cs cl (Computation and Language)',
         
-        'cs.CR (Cryptography and Security)',
-        'cs.CV (Computer Vision and Pattern Recognition)',
-        'cs.CY (Computers and Society)',
-        'cs.DB (Databases)',
-        'cs.DC (Distributed, Parallel, and Cluster Computing)',
-        'cs.DL (Digital Libraries)',
-        'cs.DM (Discrete Mathematics)',
-        'cs.DS (Data Structures and Algorithms)',
-        'cs.ET (Emerging Technologies)',
-        'cs.FL (Formal Languages and Automata Theory)',
-        'cs.GL (General Literature)',
-        'cs.GR (Graphics)',
-        'cs.GT (Computer Science and Game Theory)',
-        'cs.HC (Human-Computer Interaction)',
+        'arxiv cs cr (Cryptography and Security)',
+        'arxiv cs cv (Computer Vision and Pattern Recognition)',
+        'arxiv cs cy (Computers and Society)',
+        'arxiv cs db (Databases)',
+        'arxiv cs dc (Distributed, Parallel, and Cluster Computing)',
+        'arxiv cs dl (Digital Libraries)',
+        'arxiv cs dm (Discrete Mathematics)',
+        'arxiv cs ds (Data Structures and Algorithms)',
+        'arxiv cs et (Emerging Technologies)',
+        'arxiv cs fl (Formal Languages and Automata Theory)',
+        'arxiv cs gl (General Literature)',
+        'arxiv cs gr (Graphics)',
+        'arxiv cs gt (Computer Science and Game Theory)',
+        'arxiv cs hc (Human-Computer Interaction)',
         
-        'cs.IR (Information Retrieval)',
-        'cs.IT (Information Theory)',
-        'cs.LG (Machine Learning)',
-        'cs.LO (Logic in Computer Science)',
-        'cs.MA (Multiagent Systems)',
-        'cs.MM (Multimedia)',
-        'cs.MS (Mathematical Software)',
-        'cs.NA (Numerical Analysis)',
-        'cs.NE (Neural and Evolutionary Computing)',
-        'cs.NI (Networking and Internet Architecture)',
-        'cs.OH (Other Computer Science)',
-        'cs.OS (Operating Systems)',
-        'cs.PF (Performance)',
-        'cs.PL (Programming Languages)',
-        'cs.RO (Robotics)',
-        'cs.SC (Symbolic Computation)',
-        'cs.SD (Sound)',
-        'cs.SE (Software Engineering)',
-        'cs.SI (Social and Information Networks)',
-        'cs.SY (Systems and Control)'
+        'arxiv cs ir (Information Retrieval)',
+        'arxiv cs it (Information Theory)',
+        'arxiv cs lg (Machine Learning)',
+        'arxiv cs lo (Logic in Computer Science)',
+        'arxiv cs ma (Multiagent Systems)',
+        'arxiv cs mm (Multimedia)',
+        'arxiv cs ms (Mathematical Software)',
+        'arxiv cs na (Numerical Analysis)',
+        'arxiv cs ne (Neural and Evolutionary Computing)',
+        'arxiv cs ni (Networking and Internet Architecture)',
+        'arxiv cs oh (Other Computer Science)',
+        'arxiv cs os (Operating Systems)',
+        'arxiv cs pf (Performance)',
+        'arxiv cs pl (Programming Languages)',
+        'arxiv cs ro (Robotics)',
+        'arxiv cs sc (Symbolic Computation)',
+        'arxiv cs sd (Sound)',
+        'arxiv cs se (Software Engineering)',
+        'arxiv cs si (Social and Information Networks)',
+        'arxiv cs sy (Systems and Control)'
         Reply only one category that you think this paper might belong to. 
         Only reply the category name (not the explanation) I given without any other words, please don't use your own words.
         Be careful, only use the name of the category I give you, not the explanation part or any other words.
@@ -163,7 +163,10 @@ def get_response(dataset, model_name, index, write_file_path):
 
     with open(write_file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([model_name, index, prediction, true_label])
+        if dataset == "arxiv":
+            writer.writerow([model_name, index, prediction[:11], true_label])
+        else:
+            writer.writerow([model_name, index, prediction, true_label])
         print([model_name, index, prediction, true_label])
 
 def acc_f1(dataset, file_path, model_name):
@@ -206,7 +209,6 @@ if __name__ == '__main__':
     test_mask = data.test_mask[0] if len(data.test_mask) == 10 else data.test_mask
     test_indexes = torch.where(test_mask == True)[0].cpu().numpy().tolist()
 
-    test_indexes=[1,2,3,4,5]
 
     # create csv file
     os.makedirs("../results/LLMPredictor/llm_zero_shot", exist_ok=True)
