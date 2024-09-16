@@ -2,24 +2,11 @@ import argparse
 import time 
 import torch 
 import os
-from gnn import GNNEncoder
+import sys
+sys.path.append("../")
+from common import load_graph_dataset, GNNEncoder, array_mean_std
 import torch.nn.functional as F
 from sklearn.metrics import f1_score
-import numpy as np 
-import random
-
-
-def set_seed(seed):
-    np.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)  # cpu
-    torch.cuda.manual_seed_all(seed)  # gpu
-    torch.backends.cudnn.deterministic = True
-
-
-def array_mean_std(numbers):
-    array = np.array(numbers)
-    return np.round(np.mean(array), 3), np.round(np.std(array), 3)
 
 
 def gnn_train():
@@ -70,24 +57,14 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--run_times", type=int, default=5)
 
-    parser.add_argument("--write_result", type=int, default=1)
+    parser.add_argument("--write_result", type=int, default=0)
 
     args = parser.parse_args()
     print(args)
-    # set_seed(args.seed)
 
     device = torch.device(args.device)
+    graph_data = load_graph_dataset(args.dataset, device, "shallow" if args.emb_type == "shallow" else args.emb_model)
 
-    graph_data = torch.load(f"../datasets/{args.dataset}.pt").to(device)
-    if args.emb_type != "shallow":
-        assert os.path.exists(f"../datasets/{args.emb_model}/{args.dataset}.pt")
-        node_feat = torch.load(f"../datasets/{args.emb_model}/{args.dataset}.pt", map_location=device).to(device).type(torch.float)
-        graph_data.x = node_feat
-    
-    if len(graph_data.train_mask) == 10:
-        graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
-    
-    
     final_acc_list, final_f1_list = [], []
 
     if args.write_result:

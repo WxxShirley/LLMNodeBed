@@ -4,6 +4,9 @@ from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
 from tqdm import tqdm
 import os
 import argparse
+import sys
+sys.path.append("../")
+from common import get_cur_time
 # from tqdm.autonotebook import trange
 # import numpy as np
 
@@ -23,7 +26,8 @@ def mean_pooling_llm(token_embeddings, attention_mask):
 def lm_forwad(data):
     text_embeddings = []
     with torch.no_grad():
-        for text in tqdm(data.raw_texts, desc="Generating LM Embedding"):
+        # for text in tqdm(data.raw_texts, desc="Generating LM Embedding"):
+        for text in data.raw_texts:
             # We can also implement a parallel mode for generating embeddings. However, I've noticed that the speed tends to be somewhat slower:
             # for st_index in trange(0, len(data.raw_texts), batch_size, desc="Generating LM Embedding"):
             # text_batch = data.raw_texts[st_index: st_index + batch_size]
@@ -43,7 +47,8 @@ def lm_forwad(data):
 def llm_forward(data):
     text_embeddings = []
     with torch.no_grad():
-        for text in tqdm(data.raw_texts, desc="Generating LLM Embedding"):
+        # for text in tqdm(data.raw_texts, desc="Generating LLM Embedding"):
+        for text in data.raw_texts:
             # fix len(text) == 0 for the 153-th entry in Instagram dataset
             if len(text) == 0:
                 text = "Empty text"
@@ -91,6 +96,10 @@ if __name__ == "__main__":
         "Vicuna-13B": "/root/autodl-tmp/models/Vicuna-13B/snapshots/Vicuna-13B-v1.5", # 13B
         "Llama-13B": "/root/autodl-tmp/models/Llama2/Llama-2-13b-chat-hf" # 13B
     }
+
+    print('= ' * 20)
+    print('## Starting Time:', get_cur_time(), flush=True)
+    print(args, "\n")
     
     if args.encoder_type == "LM":
         assert args.lm_name in lm_name_dict.keys()
@@ -112,8 +121,12 @@ if __name__ == "__main__":
         llm_model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16).to(device)
         generated_node_emb = llm_forward(graph_data)
     
-    print(f"[Node Embedding] Shape {generated_node_emb.shape}")
+    print(f"[{args.dataset}-{args.llm_name if args.encoder_type == 'LLM' else args.lm_name}] Node Embedding Shape {generated_node_emb.shape}")
     if args.save_emb:
         write_dir = f"../datasets/{args.lm_name if args.encoder_type == 'LM' else args.llm_name}"
         os.makedirs(write_dir, exist_ok=True)
         torch.save(generated_node_emb, f"{write_dir}/{args.dataset}.pt")
+    
+    print('\n## Finishing Time:', get_cur_time(), flush=True)
+    print('= ' * 20)
+    print("Done!")
