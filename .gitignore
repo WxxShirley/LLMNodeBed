@@ -4,6 +4,9 @@
 /datasets/
 /results
 /results/
+/wandb
+/wandb/
+wandb
 
 .DS_Store
 
