@@ -4,9 +4,8 @@ import torch
 import os
 import sys
 sys.path.append("../")
-from common import load_graph_dataset, GNNEncoder, array_mean_std
+from common import load_graph_dataset, GNNEncoder, array_mean_std, compute_acc_and_f1
 import torch.nn.functional as F
-from sklearn.metrics import f1_score
 
 
 def gnn_train():
@@ -27,11 +26,10 @@ def gnn_test():
 
     accuracy, f1_scores = [], []
     for mask in [graph_data.train_mask, graph_data.val_mask, graph_data.test_mask]:
-        acc = int((pred[mask] == graph_data.y[mask]).sum()) / int(mask.sum())
-        accuracy.append(acc * 100.0)
+        acc, f1 = compute_acc_and_f1(pred[mask].cpu().numpy(), graph_data.y[mask].cpu().numpy())
+        accuracy.append(acc)
+        f1_scores.append(f1)
         
-        f1 = f1_score(graph_data.y[mask].cpu().numpy(), pred[mask].cpu().numpy(), average="macro")
-        f1_scores.append(f1 * 100.0)
     return accuracy, f1_scores
 
 
