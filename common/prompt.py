@@ -1,39 +1,7 @@
-CORA_Q = """Question: Which of the following 
-        sub-categories of AI does this paper belong to? Here are the 7 categories: 
-        Rule_Learning, Neural_Networks, Case_Based, 
-        Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods.
-        Reply only one category that you think this paper might belong to. 
-        Only reply the category name without any other words.
-        Answer:"""
-
-PUBMED_Q = """Question: Which of the following 
-        topic does this scientific publication talk about? Here are the 3 categories: 
-        Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2.
-        Experimental category usually refers to Experimentally induced diabetes, 
-        Diabetes Mellitus Type 1 usually means the content of the paper is about Diabetes Mellitus Type 1,
-        Diabetes Mellitus Type 2 usually means the content of the paper is about Diabetes Mellitus Type 2.
-        Reply only one category that you think this paper might belong to. Only reply the category name without any other words.
-        Answer:
-    """
-
-CITESEER_Q = """Question: Which of the following 
-        theme does this paper belong to? Here are the 6 categories: 
-        Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), 
-        HCI (Human-Computer Interaction), AI (Artificial Intelligence).
-        Reply only one category that you think this paper might belong to. 
-        Only reply the category full name I give you without any other words.
-        Answer:
-    """
-
-WIKICS_Q = """Question: Which of the following 
-        branch of Computer science does this Wikipedia-based dataset belong to? Here are the 10 categories: 
-        Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, 
-        Internet Protocols, Computer File Systems, 
-        Distributed Computing Architecture, Web Technology, Programming Language Topics.
-        Reply only one category that you think this paper might belong to. Only reply the category full name without any other words.
-        Answer:
-    """
-
+CORA_Q = """Question: Which of the following sub-categories of AI does this paper belong to? Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
+PUBMED_Q = """Question: Which of the following topic does this scientific publication talk about? Here are the 3 categories: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2. Experimental category usually refers to Experimentally induced diabetes, Diabetes Mellitus Type 1 usually means the content of the paper is about Diabetes Mellitus Type 1, Diabetes Mellitus Type 2 usually means the content of the paper is about Diabetes Mellitus Type 2. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
+CITESEER_Q = """Question: Which of the following theme does this paper belong to? Here are the 6 categories: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence). Reply only one category that you think this paper might belong to. Only reply the category full name I give you without any other words.\n\nAnswer: """
+WIKICS_Q = """Question: Which of the following branch of Computer science does this Wikipedia-based dataset belong to? Here are the 10 categories: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics. Reply only one category that you think this paper might belong to. Only reply the category full name without any other words.\n\nAnswer: """
 ARXIV_Q = """Question: Which of the following 
         arXiv CS sub-categories does this dataset belong to? Here are the 40 categories: 
         'arxiv cs na', 'arxiv cs mm', 'arxiv cs lo', 'arxiv cs cy', 'arxiv cs cr', 
@@ -92,23 +60,8 @@ ARXIV_Q = """Question: Which of the following
         Be careful, only use the name of the category I give you, not the explanation part or any other words.
         Answer:
     """
-
-INSTAGRAM_Q = """Question: Which of the following 
-        categories does this instagram user belong to? Here are the 2 categories: 
-        Normal Users, Commercial Users. 
-        Reply only one category that you think this paper might belong to. 
-        Only reply the category name I give of the category: Normal Users, Commercial Users, without any other words.
-        Answer:
-    """
-
-REDDIT_Q = """Question: Which of the following 
-        categories does this reddit user belong to? Here are the 2 categories: 
-        Normal Users, Popular Users. 
-        Popular Users' posted content are often more attractive.
-        Reply only one category that you think this paper might belong to. 
-        Only reply the category name I give of the category: Normal Users, Popular Users, without any other words.
-        Answer:
-    """
+INSTAGRAM_Q = """Question: Which of the following categories does this instagram user belong to? Here are the 2 categories: Normal Users, Commercial Users. Reply only one category that you think this paper might belong to. Only reply the category name I give of the category: Normal Users, Commercial Users, without any other words.\n\nAnswer: """
+REDDIT_Q = """Question: Which of the following categories does this reddit user belong to? Here are the 2 categories: Normal Users, Popular Users. Popular Users' posted content are often more attractive. Reply only one category that you think this paper might belong to. Only reply the category name I give of the category: Normal Users, Popular Users, without any other words.\n\nAnswer: """
 
 ZEROSHOT_PROMPTS = {
     "cora": CORA_Q,
@@ -118,4 +71,23 @@ ZEROSHOT_PROMPTS = {
     "arxiv": ARXIV_Q,
     "instagram": INSTAGRAM_Q,
     "reddit": REDDIT_Q,
+}
+
+
+CORA_EXP = "Question: Which of the following sub-categories of AI does this paper belong to: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+PUBMED_EXP = "Question: Which of the following topic does this scientific publication talk about? Here are the 3 categories: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2. Experimental category usually refers to Experimentally induced diabetes, Diabetes Mellitus Type 1 usually means the content of the paper is about Diabetes Mellitus Type 1, Diabetes Mellitus Type 2 usually means the content of the paper is about Diabetes Mellitus Type 2. Please give one or more answers of either Type 1 diabetes, Type 2 diabetes, or Experimentally induced diabetes; if multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, give a detailed explanation with quotes from the text explaining why it is related to the chosen option.\n\nAnswer: "
+ARXIV_EXP = "Question: Which arXiv CS subcategory does this paper belong to? Give 5 likely arXiv CS sub-categories as a comma-separated list ordered from most to least likely, in the form 'arxiv cs xx', and provide your reasoning.\n\nAnswer: "
+CITESEER_EXP = "Question: Which of the following sub-categories of CS does this paper belong to: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence)? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+WIKICS_EXP = "Question: Which of the following sub-categories of CS does this Wikipedia page belong to: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+INSTAGRAM_EXP = "Question: Which of the following categories does this user on Instagram belong to:  Normal Users, Commercial Users? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+REDDIT_EXP = "Question: Which of the following categories does this user on Reddit belong to:  Normal Users, Popular Users? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+
+EXPLANATION_PROMPTS = {
+    "cora": CORA_EXP, 
+    "pubmed": PUBMED_EXP, 
+    "citeseer": CITESEER_EXP,
+    "wikics": WIKICS_EXP,
+    "arxiv": ARXIV_EXP,
+    "instagram": INSTAGRAM_EXP,
+    "reddit": REDDIT_EXP
 }
