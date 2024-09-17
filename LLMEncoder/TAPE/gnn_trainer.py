@@ -189,7 +189,10 @@ class EnsembleTrainer():
             cur_score, logits = trainer.train()
             all_pred.append(logits)
             all_score[feature_type] = cur_score
-        pred_ensemble = sum(all_pred)/len(all_pred)
+        
+        # print("All Pred", all_pred)
+        pred_ensemble = sum(all_pred) / len(all_pred)
+        # print("Pred Ensemble", pred_ensemble)
         acc_ensemble = self.eval(pred_ensemble)
         all_score['ensemble'] = acc_ensemble
         return all_score

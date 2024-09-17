@@ -75,7 +75,7 @@ class LMTrainer():
         tokenizer = AutoTokenizer.from_pretrained(cfg.lm.model.name)
         if type(text)!=list:
             text = text.tolist()
-        X = tokenizer(text, padding=True, truncation=True, max_length=512)
+        X = tokenizer(text, padding=True, truncation=True, max_length=cfg.lm.train.max_length)
 
         dataset = Dataset(X, data.y.tolist())
         self.inf_dataset = dataset

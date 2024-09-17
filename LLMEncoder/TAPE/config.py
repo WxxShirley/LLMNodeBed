@@ -63,6 +63,7 @@ def set_cfg(cfg):
     cfg.lm.train = CN()
     #  Number of samples computed once per batch per device
     cfg.lm.train.batch_size = 32
+    cfg.lm.train.max_length = 512
     # Number of training steps for which the gradients should be accumulated
     cfg.lm.train.grad_acc_steps = 1
     # Base learning rate
