@@ -6,8 +6,9 @@ from transformers.modeling_outputs import TokenClassifierOutput
 
 
 class BertClassifier(PreTrainedModel):
-    def __init__(self, model, n_labels, dropout=0.0, seed=0, cla_bias=True, feat_shrink=''):
+    def __init__(self, model, n_labels, dropout=0.0, cla_bias=True, feat_shrink=''):
         super().__init__(model.config)
+        # model is an instance of `AutoModel.from_pretrained(lm_model_name)`
         self.bert_encoder = model
         self.dropout = nn.Dropout(dropout)
         self.feat_shrink = feat_shrink
@@ -51,8 +52,7 @@ class BertClaInfModel(PreTrainedModel):
         self.bert_classifier = model
         self.emb, self.pred = emb, pred
         self.feat_shrink = feat_shrink
-        self.loss_func = nn.CrossEntropyLoss(
-            label_smoothing=0.3, reduction='mean')
+        self.loss_func = nn.CrossEntropyLoss(label_smoothing=0.3, reduction='mean')
 
     @torch.no_grad()
     def forward(self,

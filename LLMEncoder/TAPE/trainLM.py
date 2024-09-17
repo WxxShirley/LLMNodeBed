@@ -1,6 +1,3 @@
-import os
-import sys
-sys.path.append(os.getcwd())
 from lm_trainer import LMTrainer
 from config import cfg, update_cfg
 import pandas as pd
@@ -20,6 +17,7 @@ def run(cfg):
         df = pd.DataFrame(all_acc)
         for k, v in df.items():
             print(f"{k}: {v.mean():.4f} ± {v.std():.4f}")
+# LM (roberta) ValAcc: 68.6000 ± 3.1177, TestAcc: 71.5993 ± 0.3632
 
 
 if __name__ == '__main__':

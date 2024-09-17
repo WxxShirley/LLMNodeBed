@@ -1,20 +1,18 @@
 import torch
 from time import time
 import numpy as np
-from gnn_utils import EarlyStopping
 import sys
+from copy import deepcopy
 sys.path.append("../..")
-from common import GNNEncoder
+import torch.nn.functional as F
+from common import GNNEncoder, compute_acc_and_f1
 from common import load_graph_dataset_for_tape
-
-LOG_FREQ = 10
 
 
 class GNNTrainer():
-
     def __init__(self, cfg, feature_type):
         self.seed = cfg.seed
-        self.device = cfg.device
+        self.device = torch.device("cuda:0" if cfg.device > 0 else "cpu")
         self.dataset_name = cfg.dataset
         self.gnn_model_name = cfg.gnn.model.name
         self.lm_model_name = cfg.lm.model.name
@@ -24,37 +22,34 @@ class GNNTrainer():
         self.lr = cfg.gnn.train.lr
         self.feature_type = feature_type
         self.epochs = cfg.gnn.train.epochs
+        self.patience = cfg.gnn.train.early_stop
 
-        # ! Load data
+        # Load data
         data, num_classes, _ = load_graph_dataset_for_tape(cfg.dataset, self.device)
 
         self.num_nodes = data.y.shape[0]
         self.num_classes = num_classes
         data.y = data.y.squeeze()
 
-        # ! Init gnn feature
-        topk = 3 if self.dataset_name == 'pubmed' else 5
+        # Init gnn feature
         if self.feature_type == 'TA':
             print("Loading pretrained LM features (title and abstract) ...")
-            LM_emb_path = f"prt_lm/{self.dataset_name}/{self.lm_model_name}-seed{self.seed}.emb"
+            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}/{cfg.lm.model.short_name}.emb"
             print(f"LM_emb_path: {LM_emb_path}")
             features = torch.from_numpy(np.array(
                 np.memmap(LM_emb_path, mode='r',
                           dtype=np.float16,
-                          shape=(self.num_nodes, 768)))
+                          shape=(self.num_nodes, 1024)))
             ).to(torch.float32)
         elif self.feature_type == 'E':
             print("Loading pretrained LM features (explanations) ...")
-            LM_emb_path = f"prt_lm/{self.dataset_name}2/{self.lm_model_name}-seed{self.seed}.emb"
+            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}2/{cfg.lm.model.short_name}.emb"
             print(f"LM_emb_path: {LM_emb_path}")
             features = torch.from_numpy(np.array(
                 np.memmap(LM_emb_path, mode='r',
                           dtype=np.float16,
                           shape=(self.num_nodes, 768)))
             ).to(torch.float32)
-        # elif self.feature_type == 'P':
-        #     print("Loading top-k prediction features ...")
-        #     features = load_gpt_preds(self.dataset_name, topk)
         else:
             print(
                 f'Feature type {self.feature_type} not supported. Loading OGB features...')
@@ -65,90 +60,136 @@ class GNNTrainer():
         self.data = data.to(self.device)
 
         # ! Trainer init
-        use_pred = self.feature_type == 'P'
-        self.model = GNNEncoder(input_dim=self.hidden_dim*topk if use_pred else self.features.shape[1],
+        self.model = GNNEncoder(input_dim=self.features.shape[1],
                                 hidden_dim=self.hidden_dim,
                                 output_dim=self.num_classes,
                                 n_layers=self.num_layers,
                                 gnn_type=self.gnn_model_name,
                                 dropout=self.dropout,
-                                use_pred=use_pred).to(self.device)
+                                ).to(self.device)
         
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(), lr=self.lr, weight_decay=0.0)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
 
-        trainable_params = sum(p.numel()
-                               for p in self.model.parameters() if p.requires_grad)
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
 
-        print(f"\nNumber of parameters: {trainable_params}")
-        self.ckpt = f"output/{self.dataset_name}/{self.gnn_model_name}.pt"
-        self.stopper = EarlyStopping(
-            patience=cfg.gnn.train.early_stop, path=self.ckpt) if cfg.gnn.train.early_stop > 0 else None
-        self.loss_func = torch.nn.CrossEntropyLoss()
-
-        from gnn_utils import Evaluator
-        self._evaluator = Evaluator(name=self.dataset_name)
-        self.evaluator = lambda pred, labels: self._evaluator.eval(
-            {"y_pred": pred.argmax(dim=-1, keepdim=True),
-             "y_true": labels.view(-1, 1)}
-        )["acc"]
-
-    def _forward(self, x, edge_index):
-        logits = self.model(x, edge_index)  # small-graph
-        return logits
+        print(f"\nNumber of GNN parameters: {trainable_params}")
+        self.ckpt = f"../../results/LLMEncoder/TAPE/{self.dataset_name}/{self.gnn_model_name}.pt"
 
     def _train(self):
-        # ! Shared
+        # the same in ../main.py where we train GNNs
         self.model.train()
         self.optimizer.zero_grad()
-        # ! Specific
-        logits = self._forward(self.features, self.data.edge_index)
-        loss = self.loss_func(
-            logits[self.data.train_mask], self.data.y[self.data.train_mask])
-        train_acc = self.evaluator(
-            logits[self.data.train_mask], self.data.y[self.data.train_mask])
+
+        output = self.model(self.features, self.data.edge_index)
+        loss = F.cross_entropy(output[self.data.train_mask], self.data.y[self.data.train_mask])
         loss.backward()
         self.optimizer.step()
-
-        return loss.item(), train_acc
+        return float(loss)
 
     @ torch.no_grad()
     def _evaluate(self):
+        # the same in ../main.py where we evaluate GNNs
         self.model.eval()
-        logits = self._forward(self.features, self.data.edge_index)
-        val_acc = self.evaluator(
-            logits[self.data.val_mask], self.data.y[self.data.val_mask])
-        test_acc = self.evaluator(
-            logits[self.data.test_mask], self.data.y[self.data.test_mask])
-        return val_acc, test_acc, logits
+        logits = self.model(self.features, self.data.edge_index)
+        pred = logits.argmax(dim=1)
+
+        accuracy, f1_scores = [], []
+        for mask in [self.data.train_mask, self.data.val_mask, self.data.test_mask]:
+            acc, f1 = compute_acc_and_f1(pred[mask].cpu().numpy(), self.data.y[mask].cpu().numpy())
+            accuracy.append(acc)
+            f1_scores.append(f1)
+        
+        return accuracy, f1_scores, logits
 
     def train(self):
         # ! Training
-        for epoch in range(self.epochs):
-            t0, es_str = time(), ''
-            loss, train_acc = self._train()
-            val_acc, test_acc, _ = self._evaluate()
-            if self.stopper is not None:
-                es_flag, es_str = self.stopper.step(val_acc, self.model, epoch)
-                if es_flag:
-                    print(
-                        f'Early stopped, loading model from epoch-{self.stopper.best_epoch}')
-                    break
-            if epoch % LOG_FREQ == 0:
-                print(
-                    f'Epoch: {epoch}, Time: {time()-t0:.4f}, Loss: {loss:.4f}, TrainAcc: {train_acc:.4f}, ValAcc: {val_acc:.4f}, ES: {es_str}')
+        best_eval_acc = best_test_acc = 0.0
+        best_eval_f1 = best_test_f1 = 0.0
+        timer, counter, best_logits = [], 0, None
+        for epoch in range(1, 1+self.epochs):
+            loss = self._train()
+            accuracy, f1_scores, cur_logits = self._evaluate()
 
-        # ! Finished training, load checkpoints
-        if self.stopper is not None:
-            self.model.load_state_dict(torch.load(self.stopper.path))
+            train_acc, val_acc, test_acc = accuracy
+            train_f1, val_f1, test_f1 = f1_scores
 
-        return self.model
+            if val_acc > best_eval_acc:
+                best_eval_acc = val_acc
+                best_test_acc = test_acc
+                counter = 0
+                best_logits = deepcopy(cur_logits)
+            else:
+                counter += 1
+            if val_f1 > best_eval_f1:
+                best_eval_f1 = val_f1
+                best_test_f1 = test_f1
+            
+            if epoch % 10 == 0:
+                print(f"Epoch {epoch:03d} Loss {loss:.4f}  Train acc {train_acc:.3f} Val acc {val_acc:.3f} Test acc {test_acc:.3f}  Train F1 {train_f1:.3f} Val F1 {val_f1:.3f} Test F1 {test_f1:.4f}")
+            
+            # Early stopping
+            if counter >= self.patience:
+                break
+    
+        print(f'\nTest Acc {best_test_acc:.3f}  Test F1 {best_test_f1:.3f}\n')
+        return {
+            "test_acc": best_test_acc, 
+            "test_f1": best_test_f1,
+            "val_acc": best_eval_acc,
+            "val_f1": best_eval_f1
+        }, best_logits
+
+
+class EnsembleTrainer():
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.device = torch.device("cuda:0" if cfg.device > 0 else "cpu")
+        self.dataset_name = cfg.dataset
+        self.gnn_model_name = cfg.gnn.model.name
+        self.lm_model_name = cfg.lm.model.name
+        self.hidden_dim = cfg.gnn.model.hidden_dim
+        self.num_layers = cfg.gnn.model.num_layers
+
+        self.dropout = cfg.gnn.train.dropout
+        self.lr = cfg.gnn.train.lr
+        self.feature_type = cfg.gnn.train.feature_type
+        self.epochs = cfg.gnn.train.epochs
+        self.weight_decay = cfg.gnn.train.weight_decay
+
+        # ! Load data
+        data, _, _ = load_graph_dataset_for_tape(self.dataset_name, self.device)
+
+        data.y = data.y.squeeze()
+        self.data = data.to(self.device)
+        self.TRAINER = GNNTrainer
 
     @ torch.no_grad()
-    def eval_and_save(self):
-        torch.save(self.model.state_dict(), self.ckpt)
-        val_acc, test_acc, logits = self._evaluate()
+    def eval(self, logits):
+        pred = logits.argmax(dim=1)
+
+        accuracy, f1_scores = [], []
+        for mask in [self.data.val_mask, self.data.test_mask]:
+            acc, f1 = compute_acc_and_f1(pred[mask].cpu().numpy(), self.data.y[mask].cpu().numpy())
+            accuracy.append(acc)
+            f1_scores.append(f1)
+        
+        val_acc, test_acc = accuracy
+        val_f1, test_f1 = f1_scores
         print(
-            f'[{self.gnn_model_name} + {self.feature_type}] ValAcc: {val_acc:.4f}, TestAcc: {test_acc:.4f}\n')
-        res = {'val_acc': val_acc, 'test_acc': test_acc}
-        return logits, res
+            f'({self.feature_type}) ValAcc: {val_acc:.4f}, TestAcc: {test_acc:.4f}, Valf1: {val_f1:.4f}, Testf1: {test_f1:.4f}\n')
+        res = {'val_acc': val_acc, 'test_acc': test_acc,'val_f1':val_f1, 'test_f1':test_f1}
+        return res
+
+    def train(self):
+        all_pred = []
+        all_score = {}
+        feature_types = self.feature_type.split('_')
+        for feature_type in feature_types:
+            trainer = self.TRAINER(self.cfg, feature_type)
+            cur_score, logits = trainer.train()
+            all_pred.append(logits)
+            all_score[feature_type] = cur_score
+        pred_ensemble = sum(all_pred)/len(all_pred)
+        acc_ensemble = self.eval(pred_ensemble)
+        all_score['ensemble'] = acc_ensemble
+        return all_score

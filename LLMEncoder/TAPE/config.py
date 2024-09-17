@@ -4,13 +4,12 @@ from yacs.config import CfgNode as CN
 
 
 def set_cfg(cfg):
-
     # ------------------------------------------------------------------------ #
     # Basic options
     # ------------------------------------------------------------------------ #
     # Dataset name
     cfg.dataset = 'cora'
-    # Cuda device number, used for machine with multiple gpus
+    # Cuda device number, used for machine with multiple gpus (0 means cpu)
     cfg.device = 1
     # Whether fix the running seed to remove randomness
     cfg.seed = None
@@ -26,9 +25,9 @@ def set_cfg(cfg):
     # GNN model name
     cfg.gnn.model.name = 'GCN'
     # Number of gnn layers
-    cfg.gnn.model.num_layers = 4
+    cfg.gnn.model.num_layers = 2
     # Hidden size of the model
-    cfg.gnn.model.hidden_dim = 128
+    cfg.gnn.model.hidden_dim = 256
 
     # ------------------------------------------------------------------------ #
     # GNN Training options
@@ -39,7 +38,7 @@ def set_cfg(cfg):
     # Maximal number of epochs
     cfg.gnn.train.epochs = 200
     # Node feature type, options: ogb, TA, P, E
-    cfg.gnn.train.feature_type = 'TA_P_E'
+    cfg.gnn.train.feature_type = 'TA'
     # Number of epochs with no improvement after which training will be stopped
     cfg.gnn.train.early_stop = 50
     # Base learning rate
@@ -47,14 +46,15 @@ def set_cfg(cfg):
     # L2 regularization, weight decay
     cfg.gnn.train.wd = 0.0
     # Dropout rate
-    cfg.gnn.train.dropout = 0.0
+    cfg.gnn.train.dropout = 0.5
 
     # ------------------------------------------------------------------------ #
     # LM Model options
     # ------------------------------------------------------------------------ #
     cfg.lm.model = CN()
     # LM model name
-    cfg.lm.model.name = 'sentence-transformers/multi-qa-distilbert-cos-v1'
+    cfg.lm.model.name = 'sentence-transformers/all-roberta-large-v1'
+    cfg.lm.model.short_name = 'roberta'
     cfg.lm.model.feat_shrink = ""
 
     # ------------------------------------------------------------------------ #
@@ -62,7 +62,7 @@ def set_cfg(cfg):
     # ------------------------------------------------------------------------ #
     cfg.lm.train = CN()
     #  Number of samples computed once per batch per device
-    cfg.lm.train.batch_size = 128
+    cfg.lm.train.batch_size = 32
     # Number of training steps for which the gradients should be accumulated
     cfg.lm.train.grad_acc_steps = 1
     # Base learning rate
@@ -88,11 +88,6 @@ def set_cfg(cfg):
     return cfg
 
 
-# Principle means that if an option is defined in a YACS config object,
-# then your program should set that configuration option using cfg.merge_from_list(opts) and not by defining,
-# for example, --train-scales as a command line argument that is then used to set cfg.TRAIN.SCALES.
-
-
 def update_cfg(cfg, args_str=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default="",
@@ -116,7 +111,6 @@ def update_cfg(cfg, args_str=None):
 
     # Update from command line
     cfg.merge_from_list(args.opts)
-
     return cfg
 
 

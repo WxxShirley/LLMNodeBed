@@ -5,8 +5,7 @@ from transformers import AutoTokenizer, AutoModel, TrainingArguments, Trainer, I
 import sys
 sys.path.append("../..")
 from common import BertClassifier, BertClaInfModel
-from common import load_graph_dataset_for_tape
-from gnn_utils import Evaluator
+from common import load_graph_dataset_for_tape, compute_acc_and_f1
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -55,20 +54,25 @@ class LMTrainer():
         self.lr = cfg.lm.train.lr
 
         self.use_gpt_str = "2" if cfg.lm.train.use_gpt else ""
-        self.output_dir = f'../../TAPE/{self.dataset_name}{self.use_gpt_str}/{self.model_name}-seed{self.seed}'
-        self.ckpt_dir = f'../../TAPE/{self.dataset_name}{self.use_gpt_str}/{self.model_name}-seed{self.seed}'
 
+        local_folder = f"../../results/LLMEncoder/TAPE"
+        self.output_dir = f'{local_folder}/{self.dataset_name}{self.use_gpt_str}/{cfg.lm.model.short_name}'
+        self.ckpt_dir = f'{local_folder}/{self.dataset_name}{self.use_gpt_str}/{cfg.lm.model.short_name}'
+        
+        if not os.path.exists(local_folder):
+            os.makedirs(local_folder, exist_ok=True)
         if not os.path.exists(self.ckpt_dir):
             os.makedirs(self.ckpt_dir, exist_ok=True)
 
         # Preprocess data
-        data, num_classes, text = load_graph_dataset_for_tape(self.dataset_name, torch.device("cuda:0"), use_gpt=cfg.lm.train.use_gpt)
+        self.device = torch.device("cuda:0" if cfg.device > 0 else "cpu")
+        data, num_classes, text = load_graph_dataset_for_tape(self.dataset_name, self.device, use_gpt=cfg.lm.train.use_gpt)
         
         self.data = data
         self.num_nodes = data.y.size(0)
         self.n_labels = num_classes
 
-        tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/multi-qa-distilbert-cos-v1")
+        tokenizer = AutoTokenizer.from_pretrained(cfg.lm.model.name)
         if type(text)!=list:
             text = text.tolist()
         X = tokenizer(text, padding=True, truncation=True, max_length=512)
@@ -85,8 +89,7 @@ class LMTrainer():
 
         # Define pretrained tokenizer and model
         # bert_model = AutoModel.from_pretrained(self.model_name)
-        bert_model = AutoModel.from_pretrained("sentence-transformers/multi-qa-distilbert-cos-v1")
-
+        bert_model = AutoModel.from_pretrained(cfg.lm.model.name)
         self.model = BertClassifier(bert_model,
                                     n_labels=self.n_labels,
                                     feat_shrink=self.feat_shrink)
@@ -94,13 +97,12 @@ class LMTrainer():
         self.model.config.dropout = self.dropout
         self.model.config.attention_dropout = self.att_dropout
 
-        trainable_params = sum(p.numel()
-                               for p in self.model.parameters() if p.requires_grad)
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         print(f"\nNumber of parameters: {trainable_params}")
 
     def train(self):
         # Define training parameters
-        eq_batch_size = self.batch_size * 4
+        eq_batch_size = self.batch_size * 1
         train_steps = self.num_nodes // eq_batch_size + 1
         eval_steps = self.eval_patience // eq_batch_size
         warmup_steps = int(self.warmup_epochs * train_steps)
@@ -132,20 +134,19 @@ class LMTrainer():
             train_dataset=self.train_dataset,
             eval_dataset=self.val_dataset,
             compute_metrics=compute_metrics,
-            # callbacks=[EarlyStoppingCallback(early_stopping_patience=3)],
         )
 
         # Train pre-trained model
         self.trainer.train()
-        torch.save(self.model.state_dict(), f"{self.ckpt_dir}.ckpt")
-        print(f'LM saved to {self.ckpt_dir}.ckpt')
+        # torch.save(self.model.state_dict(), f"{self.ckpt_dir}.ckpt")
+        # print(f'LM saved to {self.ckpt_dir}.ckpt')
 
     @torch.no_grad()
     def eval_and_save(self):
         emb = np.memmap(f"{self.ckpt_dir}.emb",
                         dtype=np.float16,
                         mode='w+',
-                        shape=(self.num_nodes, self.feat_shrink if self.feat_shrink else 768))
+                        shape=(self.num_nodes, self.feat_shrink if self.feat_shrink else 1024))
         pred = np.memmap(f"{self.ckpt_dir}.pred",
                          dtype=np.float16,
                          mode='w+',
@@ -158,7 +159,7 @@ class LMTrainer():
             output_dir=self.output_dir,
             do_train=False,
             do_predict=True,
-            per_device_eval_batch_size=self.batch_size*8,
+            per_device_eval_batch_size=self.batch_size*4,
             dataloader_drop_last=False,
             dataloader_num_workers=1,
             fp16_full_eval=True,
@@ -166,19 +167,17 @@ class LMTrainer():
 
         trainer = Trainer(model=inf_model, args=inference_args)
         trainer.predict(self.inf_dataset)
-        _evaluator = Evaluator(name=self.dataset_name)
+        
+        accuracy, f1_scores = [], []
+        pred = torch.tensor(pred).to(self.device)
+        for mask in [self.data.train_mask, self.data.val_mask, self.data.test_mask]:
+            acc, f1 = compute_acc_and_f1(np.argmax(pred[mask].cpu().numpy(), -1), self.data.y[mask].cpu().numpy())
+            accuracy.append(acc)
+            f1_scores.append(f1)
+        
+        train_acc, val_acc, test_acc = accuracy
+        train_f1, val_f1, test_f1 = f1_scores
 
-        def evaluator(preds, labels): return _evaluator.eval({
-            "y_true": torch.tensor(labels).view(-1, 1),
-            "y_pred": torch.tensor(preds).view(-1, 1),
-        })["acc"]
-
-        def eval(x): return evaluator(
-            np.argmax(pred[x], -1), self.data.y[x])
-
-        train_acc = eval(self.data.train_mask)
-        val_acc = eval(self.data.val_mask)
-        test_acc = eval(self.data.test_mask)
-        print(
-            f'[LM] TrainAcc: {train_acc:.4f}, ValAcc: {val_acc:.4f}, TestAcc: {test_acc:.4f}\n')
+        print(f'[LM] TrainAcc: {train_acc:.3f}, ValAcc: {val_acc:.3f}, TestAcc: {test_acc:.3f}')
+        print(f'[LM] TrainF1 {train_f1:.3f}, ValF1 {val_f1:.3f}, TestF1 {test_f1:.3f}')
         return {'TrainAcc': train_acc, 'ValAcc': val_acc, 'TestAcc': test_acc}
