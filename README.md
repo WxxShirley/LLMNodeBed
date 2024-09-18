@@ -1,9 +1,13 @@
-# (tentative) Do We Really Need LLMs for Graph Tasks? A Benchmark
+# (tentative) How Much Have We Achieved? Revisiting and Benchmarking on LLMs for Graph Tasks.
 
 This is our ongoing project to explore the effectiveness of Large Language Models (LLMs) for graph tasks using two popular approaches:
 
 * **LLM as Encoder**: Utilize LLMs' text representation capabilities to generate node embeddings. Compare these with embeddings from smaller language models and shallow methods.
 * **LLM as Predictor**: Harness LLMs' reasoning abilities to directly predict node labels. Evaluate this in both supervised and zero-shot scenarios.
+
+In terms of implementation and engineering, unlike existing LLM+Graph benchmarks (e.g., [GLBench](https://github.com/NineAbyss/GLBench)) that merely collect code repositories without unified integration, we will develop **a comprehensive sandbox** where other researchers can easily invoke LM/LLM/GNN/LLM+GNN pipelines and observe results seamlessly.
+
+
 
 
 ## Work in Progress 
@@ -15,11 +19,26 @@ This is our ongoing project to explore the effectiveness of Large Language Model
   * **Performance** LLMs generate higher-quality text representations compared to LMs, as shown by improved results in downstream task, i.e., node classification. This is especially evident in datasets such as arXiv, which includes 40 categories and demands highly discriminative node representations.
   * **Efficiency** Although LLMs improve performance in textual representation learning, they require extensive encoding time. For example, encoding arXiv data with LLMs (13B parameters) takes over **5 hours**. Additionally, LLMs necessitate a high embedding dimension (4096 or 5120), whereas LMs can reduce memory usage significantly with dimensions of 768 or 1024.
 
-![performance](README.assets/LLMEncoder/gnn_performance.jpg)
-![performance2](README.assets/LLMEncoder/gnn_performance2.jpg)
-![cost](README.assets/LLMEncoder/emb_time.jpg)
+<!-- ![performance](README.assets/LLMEncoder/gnn_performance.jpg) -->
+<img src="README.assets/LLMEncoder/gnn_performance2.jpg" width="70%"/>
+<img src="README.assets/LLMEncoder/emb_time.jpg" width="80%"/>
 
-- [ ] TAPE and OFA - investigate i) the quality of LLM's generated text for downstream tasks, ii) the effectiveness of LLM's generated embeddings 
+
+- [ ] TAPE Implementation and Experiments
+  * The TA version of TAPE, which uses only each node's original text followed by a decoupled LM+GNN architecture, has completed experiments.
+  * The full version of TAPE requires an LLM to generate reasoning explanations for each node in text format, which is quite **resource-intensive**. We are currently conducting experiments to investigate: i) **whether performance is significantly influenced by the capabilities of the LLMs** (e.g., the original TAPE paper relies on GPT-3.5-turbo), and ii) **the effectiveness-cost balance of using LLMs as text generators**
+
+- [ ] OFA Implementation and Experiments
+
+
+### **RQ2 How Effective Are LLMs as Predictors?**
+
+We investigate this research question under both zero-shot and supervised scenarios 
+
+#### Zero-shot Setting
+
+- [ ] LLMs Direct Inference
+- [ ] LLMs Direct Inference w. Structural Information 
 
 
 ## Dataset & Setup
@@ -40,6 +59,7 @@ This is our ongoing project to explore the effectiveness of Large Language Model
   | LLM  | Mistral-7B        | 7B    |
   | LLM  | Llama3-8B         | 8B    |
   | LLM  | Vicuna-13B        | 13B   |
+  | LLM  | Llama2-13B        | 13B   |
 
 
 - `main.py`: Perform node classification on experimental datasets using either (L)LM-generated embeddings or initial shallow embeddings.
