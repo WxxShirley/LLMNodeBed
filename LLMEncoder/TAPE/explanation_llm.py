@@ -7,7 +7,7 @@ import argparse
 import os
 import sys
 sys.path.append("../../")
-from common import load_graph_dataset_for_tape, EXPLANATION_PROMPTS as prompt_dict
+from common import load_graph_dataset_for_tape, EXPLANATION_PROMPTS as prompt_dict, get_cur_time
 
 
 llm_path_dict = {
@@ -28,7 +28,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     device = torch.device(args.device)
-
+    print('= ' * 20)
+    print('## Starting Time:', get_cur_time(), flush=True)
+    print(args, "\n")
+    
     graph_data, _, raw_texts = load_graph_dataset_for_tape(args.dataset, device)
     
     assert args.llm_name in llm_path_dict.keys()
@@ -51,7 +54,9 @@ if __name__ == "__main__":
         text_batch, index_batch = batch[1], batch[0]
         batch_prompts = [f"{text}\n{prompt}" for text in text_batch]
         inputs = llm_tokenizer(batch_prompts, return_tensors="pt", padding=True, truncation=True).to(device)
-        outputs = llm_model.generate(**inputs, max_length=max_length)
+        copy_inputs = llm_tokenizer(batch_prompts)
+        cur_max_length = max([len(one_sample) for one_sample in copy_inputs["input_ids"]])
+        outputs = llm_model.generate(**inputs, max_length=max(max_length, cur_max_length+20))
         answers = [llm_tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
         
         for idx, answer in zip(index_batch, answers):
@@ -63,4 +68,8 @@ if __name__ == "__main__":
                 file.write(json.dumps({"idx": idx.item(), "answer": answer}) + "\n")
                 file.flush()
         
-        del inputs, outputs
+        del inputs, outputs, copy_inputs
+    
+    print('\n## Finishing Time:', get_cur_time(), flush=True)
+    print('= ' * 20)
+    print("Done!")

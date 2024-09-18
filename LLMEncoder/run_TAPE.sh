@@ -14,3 +14,9 @@ for DATASET in pubmed arxiv ; do
 
     python -m trainGNN dataset $DATASET runs 5 >> ../../results/LLMEncoder/TAPE/$DATASET+GNN.log 
 done 
+
+
+# Generate explanations 
+for DATASET in cora pubmed citeseer wikics  instagram reddit ; do 
+    python3 -u explanation_llm.py --dataset=$DATASET
+done 
