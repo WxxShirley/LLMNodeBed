@@ -48,7 +48,7 @@ class GNNTrainer():
             features = torch.from_numpy(np.array(
                 np.memmap(LM_emb_path, mode='r',
                           dtype=np.float16,
-                          shape=(self.num_nodes, 768)))
+                          shape=(self.num_nodes, 1024)))
             ).to(torch.float32)
         else:
             print(

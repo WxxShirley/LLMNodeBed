@@ -20,3 +20,12 @@ done
 for DATASET in cora pubmed citeseer wikics  instagram reddit ; do 
     python3 -u explanation_llm.py --dataset=$DATASET
 done 
+
+
+# Full version 
+for DATASET in cora ; do 
+    WANDB_DISABLED=True TOKENIZERS_PARALLELISM=False  python -m trainLM dataset $DATASET runs 2  >> ../../results/LLMEncoder/TAPE/$DATASET+LM.log 
+    WANDB_DISABLED=True TOKENIZERS_PARALLELISM=False  python -m trainLM dataset $DATASET runs 2 lm.train.use_gpt True  lm.train.epochs 2 >> ../../results/LLMEncoder/TAPE/$DATASET+LM+2.log 
+    
+    python -m trainEnsemble dataset $DATASET runs 5 gnn.train.feature_type TA_E >> ../../results/LLMEncoder/TAPE/$DATASET+Ensemble.log 
+done 

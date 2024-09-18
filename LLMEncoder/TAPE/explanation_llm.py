@@ -73,3 +73,6 @@ if __name__ == "__main__":
     print('\n## Finishing Time:', get_cur_time(), flush=True)
     print('= ' * 20)
     print("Done!")
+
+    # Llama3-8B Cora 1h22min
+    # Llama3-8B Pubmed 5h36min
