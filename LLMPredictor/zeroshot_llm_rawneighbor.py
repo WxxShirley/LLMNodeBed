@@ -6,23 +6,43 @@ import csv
 import sys
 import time
 from http import HTTPStatus
+import dashscope
 from dashscope import Generation
+import networkx as nx
+from torch_geometric.utils.convert import to_networkx
 
 
 sys.path.append("../")
-from common import ZEROSHOT_PROMPTS as PROMPT_DICT
+from common import RAW_NEIGHBOR_PROMPTS as PROMPT_DICT
 from common import load_graph_dataset, compute_acc_and_f1
 
 
 def get_response(dataset, model_name, index, write_file_path):
     discription = graph_data.raw_texts[index]
     question = PROMPT_DICT[dataset]
-    
+
+    # find 1st neighbors
+    G=to_networkx(graph_data)
+
+    neighbor_list = list(nx.neighbors(G, index))
+
+    if dataset == "instagram":
+        neighbor_list = neighbor_list[1:]
+
+    neighbor_list = neighbor_list[:10] if len(neighbor_list) > 10 else neighbor_list
+
+    neighbor_info_list = []
+    for iter in neighbor_list:
+        neighbor_info_list.append(graph_data.raw_texts[iter])
+
+    neighbor_info = "\none of its neighbors' feature:".join(neighbor_info_list)
+
     if model_name == "chatglm3-6b":
+        dashscope.api_key = "sk-6ed3b105aaac459097168fd8cca58513"
         messages=[
             {
                 'role': 'user',
-                'content': f"{discription}\n{question}"
+                'content': f"{discription}\n{neighbor_info}\n{question}"
             }]
     
         gen = Generation()
@@ -115,13 +135,13 @@ if __name__ == '__main__':
     graph_data = load_graph_dataset(args.dataset, device)
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
 
-    test_indexes = [1,2,3]
+    test_indexes = [1,2,3,4,5]
 
     # Create csv file
-    zero_shot_predfolder = "../results/LLMPredictor/llm_zero_shot"
-    file_path = f"{zero_shot_predfolder}/{args.model_name}/{args.dataset}.csv"
-    os.makedirs(zero_shot_predfolder, exist_ok=True)
-    os.makedirs(f"{zero_shot_predfolder}/{args.model_name}", exist_ok=True)
+    raw_neighbor_predfolder = "../results/LLMPredictor/llm_raw_neighbors"
+    file_path = f"{raw_neighbor_predfolder}/{args.model_name}/{args.dataset}.csv"
+    os.makedirs(raw_neighbor_predfolder, exist_ok=True)
+    os.makedirs(f"{raw_neighbor_predfolder}/{args.model_name}", exist_ok=True)
 
     has_inferenced_index = []
     if os.path.exists(file_path):
