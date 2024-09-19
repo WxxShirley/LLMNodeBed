@@ -16,8 +16,7 @@ def run(cfg):
     if len(all_acc) > 1:
         df = pd.DataFrame(all_acc)
         for k, v in df.items():
-            print(f"{k}: {v.mean():.4f} ± {v.std():.4f}")
-# LM (roberta) ValAcc: 68.6000 ± 3.1177, TestAcc: 71.5993 ± 0.3632
+            print(f"{k}: {v.mean():.2f}±{v.std():.2f} ", end=' ')
 
 
 if __name__ == '__main__':
