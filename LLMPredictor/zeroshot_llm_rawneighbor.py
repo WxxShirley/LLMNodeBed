@@ -135,7 +135,6 @@ if __name__ == '__main__':
     graph_data = load_graph_dataset(args.dataset, device)
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
 
-    test_indexes = [1,2,3,4,5]
 
     # Create csv file
     raw_neighbor_predfolder = "../results/LLMPredictor/llm_raw_neighbors"
