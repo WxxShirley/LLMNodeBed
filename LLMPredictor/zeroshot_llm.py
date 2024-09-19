@@ -7,7 +7,7 @@ import sys
 import time
 from http import HTTPStatus
 from dashscope import Generation
-
+import dashscope
 
 sys.path.append("../")
 from common import ZEROSHOT_PROMPTS as PROMPT_DICT
@@ -19,6 +19,7 @@ def get_response(dataset, model_name, index, write_file_path):
     question = PROMPT_DICT[dataset]
     
     if model_name == "chatglm3-6b":
+        dashscope.api_key = "sk-6ed3b105aaac459097168fd8cca58513"
         messages=[
             {
                 'role': 'user',
