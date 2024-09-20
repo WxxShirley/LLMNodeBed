@@ -32,9 +32,25 @@ def get_response(dataset, model_name, index, write_file_path):
             messages=messages,
             result_format='message',  # set the result is message format.
         )
-        prediction = response["output"]["choices"][0]["message"]["content"].replace('\n', '').strip()
+        #prediction = response["output"]["choices"][0]["message"]["content"].replace('\n', '').strip()
+        prediction = response.split(", ")[-1].strip("'")
 
+    elif model_name == "deepseek-chat":
+        client = OpenAI(
+            api_key="sk-a8a2461880014e87bc10ca6c9c62bfdc", 
+            base_url="https://api.deepseek.com")
 
+        response = client.chat.completions.create(
+            model = model_name,
+            messages=[
+                {
+                'role': 'user',
+                'content': f"{discription}\n{question}"
+                }
+            ],
+            stream=False
+        )
+        prediction = response.choices[0].message.content
 
     else:
         client = OpenAI(
@@ -90,6 +106,25 @@ def evaluate(file_path, dataset):
                     predict_labels.append(row[1][:2])
                 else:
                     predict_labels.append(row[1])
+            
+            if dataset == "cora":
+                true_labels.append(row[2])
+                if "Rule_Learning" in row[1]:
+                    predict_labels.append("Rule_Learning")
+                elif "Neural_Networks" in row[1]:
+                    predict_labels.append("Neural_Networks")
+                elif "Case_Based" in row[1]:
+                    predict_labels.append("Case_Based")
+                elif "Genetic_Algorithms" in row[1]:
+                    predict_labels.append("Genetic_Algorithms")
+                elif "Theory" in row[1]:
+                    predict_labels.append("Theory")
+                elif "Reinforcement_Learning" in row[1]:
+                    predict_labels.append("Reinforcement_Learning")
+                elif "Probabilistic_Methods" in row[1]:
+                    predict_labels.append("Probabilistic_Methods")
+                else:
+                    predict_labels.append(row[1])
             else:
                 true_labels.append(row[2])
                 predict_labels.append(row[1])
@@ -105,8 +140,8 @@ def evaluate(file_path, dataset):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="cora")
-    parser.add_argument("--model_name", type=str, default="chatglm3-6b")
+    parser.add_argument("--dataset", type=str, default="instagram")
+    parser.add_argument("--model_name", type=str, default="deepseek-chat")
     parser.add_argument("--device", type=str, default="cpu")
 
     args = parser.parse_args()
