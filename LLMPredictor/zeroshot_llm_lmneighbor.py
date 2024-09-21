@@ -6,28 +6,44 @@ import csv
 import sys
 import time
 from http import HTTPStatus
-from dashscope import Generation
 import dashscope
-from zhipuai import ZhipuAI
+from dashscope import Generation
+import networkx as nx
+from torch_geometric.utils.convert import to_networkx
+from sklearn.neighbors import kneighbors_graph
+
 
 sys.path.append("../")
-from common import ZEROSHOT_PROMPTS as PROMPT_DICT
+from common import RAW_NEIGHBOR_PROMPTS as PROMPT_DICT
 from common import load_graph_dataset, compute_acc_and_f1
 
 
 def get_response(dataset, model_name, index, write_file_path):
     discription = graph_data.raw_texts[index]
     question = PROMPT_DICT[dataset]
-    
+
+    # find 1st neighbors
+    G=to_networkx(graph_data)
+
+    neighbor_list = list(nx.neighbors(G, index))
+
+    if dataset == "instagram":
+        neighbor_list = neighbor_list[1:]
+
+    neighbor_list = neighbor_list[:10] if len(neighbor_list) > 10 else neighbor_list
+
+    neighbor_info_list = []
+    for iter in neighbor_list:
+        neighbor_info_list.append(graph_data.raw_texts[iter])
+
+    neighbor_info = "\none of its neighbors' feature:".join(neighbor_info_list)
+
     if model_name == "chatglm3-6b":
-        
-        # sk-946342daa7234baeb39287866be76505
-        # sk-68015cc6bf8c40a4a934dcc4692ebbd7
-        dashscope.api_key = "sk-946342daa7234baeb39287866be76505"
+        dashscope.api_key = "sk-6ed3b105aaac459097168fd8cca58513"
         messages=[
             {
                 'role': 'user',
-                'content': f"{discription}\n{question}"
+                'content': f"{discription}\n{neighbor_info}\n{question}"
             }]
     
         gen = Generation()
@@ -37,6 +53,7 @@ def get_response(dataset, model_name, index, write_file_path):
             result_format='message',  # set the result is message format.
         )
         prediction = response["output"]["choices"][0]["message"]["content"].replace('\n', '').strip()
+
 
     elif model_name == "deepseek-chat":
         client = OpenAI(
@@ -48,12 +65,14 @@ def get_response(dataset, model_name, index, write_file_path):
             messages=[
                 {
                 'role': 'user',
-                'content': f"{discription}\n{question}"
+                'content': f"{discription}\n{neighbor_info}\n{question}"
                 }
             ],
             stream=False
         )
         prediction = response.choices[0].message.content
+
+
 
     else:
         client = OpenAI(
@@ -109,25 +128,6 @@ def evaluate(file_path, dataset):
                     predict_labels.append(row[1][:2])
                 else:
                     predict_labels.append(row[1])
-            
-            if dataset == "cora":
-                true_labels.append(row[2])
-                if "Rule_Learning" in row[1]:
-                    predict_labels.append("Rule_Learning")
-                elif "Neural_Networks" in row[1]:
-                    predict_labels.append("Neural_Networks")
-                elif "Case_Based" in row[1]:
-                    predict_labels.append("Case_Based")
-                elif "Genetic_Algorithms" in row[1]:
-                    predict_labels.append("Genetic_Algorithms")
-                elif "Theory" in row[1]:
-                    predict_labels.append("Theory")
-                elif "Reinforcement_Learning" in row[1]:
-                    predict_labels.append("Reinforcement_Learning")
-                elif "Probabilistic_Methods" in row[1]:
-                    predict_labels.append("Probabilistic_Methods")
-                else:
-                    predict_labels.append(row[1])
             else:
                 true_labels.append(row[2])
                 predict_labels.append(row[1])
@@ -143,8 +143,7 @@ def evaluate(file_path, dataset):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="instagram")
-    # chatglm3-6b   deepseek-chat   qwen-turbo
+    parser.add_argument("--dataset", type=str, default="citeseer")
     parser.add_argument("--model_name", type=str, default="chatglm3-6b")
     parser.add_argument("--device", type=str, default="cpu")
 
@@ -155,11 +154,12 @@ if __name__ == '__main__':
     graph_data = load_graph_dataset(args.dataset, device)
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
 
+
     # Create csv file
-    zero_shot_predfolder = "../results/LLMPredictor/llm_zero_shot"
-    file_path = f"{zero_shot_predfolder}/{args.model_name}/{args.dataset}.csv"
-    os.makedirs(zero_shot_predfolder, exist_ok=True)
-    os.makedirs(f"{zero_shot_predfolder}/{args.model_name}", exist_ok=True)
+    raw_neighbor_predfolder = "../results/LLMPredictor/llm_raw_neighbors"
+    file_path = f"{raw_neighbor_predfolder}/{args.model_name}/{args.dataset}.csv"
+    os.makedirs(raw_neighbor_predfolder, exist_ok=True)
+    os.makedirs(f"{raw_neighbor_predfolder}/{args.model_name}", exist_ok=True)
 
     has_inferenced_index = []
     if os.path.exists(file_path):

@@ -10,12 +10,12 @@ import dashscope
 from dashscope import Generation
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
+from sklearn.neighbors import kneighbors_graph
 
 
 sys.path.append("../")
 from common import RAW_NEIGHBOR_PROMPTS as PROMPT_DICT
 from common import load_graph_dataset, compute_acc_and_f1
-
 
 def get_response(dataset, model_name, index, write_file_path):
     discription = graph_data.raw_texts[index]
@@ -38,7 +38,7 @@ def get_response(dataset, model_name, index, write_file_path):
     neighbor_info = "\none of its neighbors' feature:".join(neighbor_info_list)
 
     if model_name == "chatglm3-6b":
-        dashscope.api_key = "sk-6ed3b105aaac459097168fd8cca58513"
+        dashscope.api_key = "sk-946342daa7234baeb39287866be76505"
         messages=[
             {
                 'role': 'user',
@@ -142,7 +142,7 @@ def evaluate(file_path, dataset):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="citeseer")
+    parser.add_argument("--dataset", type=str, default="instagram")
     parser.add_argument("--model_name", type=str, default="chatglm3-6b")
     parser.add_argument("--device", type=str, default="cpu")
 
@@ -152,6 +152,7 @@ if __name__ == '__main__':
     device = torch.device(args.device)
     graph_data = load_graph_dataset(args.dataset, device)
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
+    test_indexes = [1,2,3]
 
 
     # Create csv file
