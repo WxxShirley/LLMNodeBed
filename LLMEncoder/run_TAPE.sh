@@ -15,6 +15,13 @@ for DATASET in arxiv ; do
 done 
 
 
+
+# Preparation - Generation explanations via LLMs
+for DATASET in cora citeseer pubmed wikics instagram reddit  ; do 
+    # python3 -u explanation_api.py --dataset=$DATASET
+    python3 -u explanation_qwen.py --dataset=$DATASET
+done 
+
 # Full TAPE  (LM+GNN Decoupled)
 #   - First fine-tune a LM (roberta-355M) based on LLM's generated explanations
 #   - Then train a GNN (default: 2 layers GCN)
@@ -24,12 +31,4 @@ for LLM in Qwen2.5-3B  Llama3-8B DeepSeek-Chat ; do
     
          python -m trainEnsemble dataset $DATASET runs 5 gnn.train.feature_type TA_E lm.train.llm_name $LLM   >> ../../results/LLMEncoder/TAPE/$DATASET+Ensemble+$LLM.log 
     done 
-done 
-
-
-cd explanation
-
-for DATASET in cora citeseer pubmed wikics instagram reddit  ; do 
-    # python3 -u explanation_llm.py --dataset=$DATASET
-    python3 -u explanation_qwen.py --dataset=$DATASET
 done 

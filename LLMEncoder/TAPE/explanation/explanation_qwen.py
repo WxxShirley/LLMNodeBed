@@ -60,6 +60,9 @@ if __name__ == "__main__":
         text = llm_tokenizer.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
+
+        # Deal with over-length
+        text = text[:min(len(text), 2048)]
         model_inputs = llm_tokenizer([text], return_tensors="pt").to(llm_model.device)
         generated_ids = llm_model.generate(**model_inputs, max_new_tokens=max_length)
         generated_ids = [
