@@ -25,7 +25,7 @@ done
 # Full TAPE  (LM+GNN Decoupled)
 #   - First fine-tune a LM (roberta-355M) based on LLM's generated explanations
 #   - Then train a GNN (default: 2 layers GCN)
-for LLM in Qwen2.5-3B  Llama3-8B DeepSeek-Chat ; do 
+for LLM in Qwen2.5-3B   DeepSeek-Chat ; do 
     for DATASET in citeseer ; do  
          WANDB_DISABLED=True TOKENIZERS_PARALLELISM=False  python -m trainLM dataset $DATASET runs 3  lm.train.use_gpt True   lm.train.llm_name $LLM  >> ../../results/LLMEncoder/TAPE/$DATASET+LM+$LLM.log 
     
