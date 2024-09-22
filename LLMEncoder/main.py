@@ -68,7 +68,7 @@ if __name__ == "__main__":
     if args.write_result:
         os.makedirs("../results/LLMEncoder", exist_ok=True)
         write_file = open(f"../results/LLMEncoder/{args.dataset}.csv", mode='a', newline='')
-
+        
     for i in range(1, args.run_times+1):
         gnn_model = GNNEncoder(
             input_dim=graph_data.x.shape[1],
@@ -117,9 +117,9 @@ if __name__ == "__main__":
     
     acc_mean, acc_std = array_mean_std(final_acc_list)
     f1_mean, f1_std = array_mean_std(final_f1_list)
-    print(f"\n[Final] Acc {acc_mean}+-{acc_std}  F1 {f1_mean}+-{f1_std}")
+    print(f"\n[Final] Acc {acc_mean}±{acc_std}  F1 {f1_mean}±{f1_std}")
 
     if args.write_result:
         import csv
         writer = csv.writer(write_file)
-        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.emb_type, args.emb_model if args.emb_type != "shallow" else "-", f"{acc_mean}+-{acc_std}", f"{f1_mean}+-{f1_std}", trainable_params])
+        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.emb_type, args.emb_model if args.emb_type != "shallow" else "-", f"{acc_mean}±{acc_std}", f"{f1_mean}±{f1_std}", trainable_params])

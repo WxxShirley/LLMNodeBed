@@ -47,8 +47,8 @@ def lm_forwad(data):
 def llm_forward(data):
     text_embeddings = []
     with torch.no_grad():
-        # for text in tqdm(data.raw_texts, desc="Generating LLM Embedding"):
-        for text in data.raw_texts:
+        for text in tqdm(data.raw_texts, desc="Generating LLM Embedding"):
+        # for text in data.raw_texts:
             # fix len(text) == 0 for the 153-th entry in Instagram dataset
             if len(text) == 0:
                 text = "Empty text"
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--encoder_type", type=str, default="LM", choices=["LLM", "LM"])
     parser.add_argument("--lm_name", type=str, default="e5-large", choices=["e5-large", "SentenceBert", "MiniLM", "bert", "roberta"])
-    parser.add_argument("--llm_name", type=str, default="Mistral-7B", choices=["Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"])
+    parser.add_argument("--llm_name", type=str, default="Mistral-7B", choices=["Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"])
     parser.add_argument("--use_cls", type=int, default=1)
     parser.add_argument("--save_emb", type=int, default=1)
     
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         "e5-large": "intfloat/e5-large-v2", # 355M
     }
     llm_path_dict = {
-        # TODO: add more LLMs
+        "Qwen-3B": "/root/autodl-tmp/models/qwen/Qwen2___5-3B-Instruct", # 3B
         "Mistral-7B": "/root/autodl-tmp/models/Mistral-7B/snapshots/Mistral-7B-Instruct-v0.2", # 7B
         "Llama3-8B": "/root/autodl-tmp/models/LLM-Research/Meta-Llama-3-8B-Instruct", # 8B
         "Vicuna-13B": "/root/autodl-tmp/models/Vicuna-13B/snapshots/Vicuna-13B-v1.5", # 13B
