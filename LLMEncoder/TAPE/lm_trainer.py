@@ -53,7 +53,7 @@ class LMTrainer():
         self.grad_acc_steps = cfg.lm.train.grad_acc_steps
         self.lr = cfg.lm.train.lr
 
-        self.use_gpt_str = "2" if cfg.lm.train.use_gpt else ""
+        self.use_gpt_str = cfg.lm.train.llm_name if cfg.lm.train.use_gpt else ""
 
         local_folder = f"../../results/LLMEncoder/TAPE"
         self.output_dir = f'{local_folder}/{self.dataset_name}{self.use_gpt_str}/{cfg.lm.model.short_name}'
@@ -66,7 +66,7 @@ class LMTrainer():
 
         # Preprocess data
         self.device = torch.device("cuda:0" if cfg.device > 0 else "cpu")
-        data, num_classes, text = load_graph_dataset_for_tape(self.dataset_name, self.device, use_gpt=cfg.lm.train.use_gpt)
+        data, num_classes, text = load_graph_dataset_for_tape(self.dataset_name, self.device, use_gpt=cfg.lm.train.use_gpt, gpt_name=cfg.lm.train.llm_name)
         
         self.data = data
         self.num_nodes = data.y.size(0)
@@ -180,4 +180,5 @@ class LMTrainer():
 
         print(f'[LM] TrainAcc: {train_acc:.3f}, ValAcc: {val_acc:.3f}, TestAcc: {test_acc:.3f}')
         print(f'[LM] TrainF1 {train_f1:.3f}, ValF1 {val_f1:.3f}, TestF1 {test_f1:.3f}')
-        return {'TrainAcc': train_acc, 'ValAcc': val_acc, 'TestAcc': test_acc}
+        return {'TrainAcc': train_acc, 'ValAcc': val_acc, 'TestAcc': test_acc,
+                'TrainF1': train_f1, 'ValF1': val_f1, 'TestF1': test_f1}

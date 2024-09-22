@@ -1,3 +1,16 @@
+for DATASET in cora pubmed citeseer wikics instagram reddit; do 
+    for LM in MiniLM SentenceBert bert roberta e5-large; do 
+        python embedding.py --encoder_type=LM --lm_name=$LM --dataset=$DATASET 
+    done 
+    
+    for LLM in Qwen-3B Mistral-7B Vicuna-13B Llama3-8B Llama-13B; do 
+        python embedding.py --encoder_type=LLM --llm_name=$LLM  --dataset=$DATASET --use_cls=0 
+    done 
+done 
+
+
+
+
 for DATASET in cora pubmed citeseer wikics instagram reddit ; do 
     for GNN_TYPE in GCN GAT SAGE TransformerConv; do 
         # non-gridsearch version 
@@ -22,7 +35,7 @@ for DATASET in cora pubmed citeseer wikics instagram reddit ; do
             done
         done
 
-        for LLM in Mistral-7B Llama3-8B Llama-13B Vicuna-13B; do 
+        for LLM in Qwen-3B Mistral-7B Llama3-8B Llama-13B Vicuna-13B; do 
             for HIDDEN in 64 128 256 512; do 
                 for LAYER in 2 3; do 
                     for DROPOUT in 0.3 0.5; do 
@@ -53,7 +66,7 @@ for DATASET in arxiv; do
             python3 -u main.py --emb_type=LM --emb_model=$LM --dataset=$DATASET  --gnn_type=$GNN_TYPE --write_result=1 
         done 
 
-        for LLM in Mistral-7B Llama3-8B Llama-13B Vicuna-13B ; do 
+        for LLM in Qwen-3B Mistral-7B Llama3-8B Llama-13B Vicuna-13B ; do 
             python3 -u main.py --emb_type=LLM --emb_model=$LLM  --dataset=$DATASET --gnn_type=$GNN_TYPE --write_result=1
         done 
     done

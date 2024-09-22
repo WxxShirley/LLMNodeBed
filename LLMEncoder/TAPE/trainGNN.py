@@ -21,7 +21,7 @@ def run(cfg):
 
     if len(all_scores) > 1:
         df = pd.DataFrame(all_scores)
-        print(f"[{cfg.gnn.model.name} + {cfg.gnn.train.feature_type}] Acc {df['test_acc'].mean():.3f} ± {df['test_acc'].std():.3f}, TestF1: {df['test_f1'].mean():.3f} ± {df['test_f1'].std():.3f}")
+        print(f"[{cfg.gnn.model.name} + {cfg.gnn.train.feature_type}] Acc {df['test_acc'].mean():.2f} ± {df['test_acc'].std():.2f}, TestF1: {df['test_f1'].mean():.2f} ± {df['test_f1'].std():.2f}")
     print(f"Running time: {(end-start)/len(seeds):.2f}s")
 
 

@@ -85,6 +85,7 @@ def set_cfg(cfg):
     # Whether or not to use the gpt responses (i.e., explanation and prediction) as text input
     # If not, use the original text attributes (i.e., title and abstract)
     cfg.lm.train.use_gpt = False
+    cfg.lm.train.llm_name = "Qwen-3B"
 
     return cfg
 
