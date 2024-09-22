@@ -34,6 +34,8 @@ def extract_common_values(dict1, dict2):
         common_list = list(set(dict1[key]) & set(dict2[key]))
         if common_list: 
             common_values[key] = common_list
+        else:
+            common_values[key] = []
 
     return common_values
 
@@ -62,4 +64,7 @@ def k_1_neighbor_intersection(dataset):
 
 if __name__ == '__main__':
     common_neighbors = k_1_neighbor_intersection ("cora")
-    print(common_neighbors)
+    print(common_neighbors[1])
+
+    k_neighbors = kneighbor_index("cora")
+    print(k_neighbors[1])

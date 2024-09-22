@@ -11,10 +11,11 @@ from dashscope import Generation
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 from sklearn.neighbors import kneighbors_graph
+from kneighbor import kneighbor_index, extract_common_values, k_1_neighbor_intersection
 
 
 sys.path.append("../")
-from common import RAW_NEIGHBOR_PROMPTS as PROMPT_DICT
+from common import LM_NEIGHBOR_PROMPTS as PROMPT_DICT
 from common import load_graph_dataset, compute_acc_and_f1
 
 
@@ -22,15 +23,14 @@ def get_response(dataset, model_name, index, write_file_path):
     discription = graph_data.raw_texts[index]
     question = PROMPT_DICT[dataset]
 
-    # find 1st neighbors
     G=to_networkx(graph_data)
 
-    neighbor_list = list(nx.neighbors(G, index))
+    # find k&1 neighbors
 
-    if dataset == "instagram":
-        neighbor_list = neighbor_list[1:]
+    neighbor_list = k_1_neighbor_intersection(dataset)[index]
 
-    neighbor_list = neighbor_list[:10] if len(neighbor_list) > 10 else neighbor_list
+    if len(neighbor_list) == 0:
+        neighbor_list = list(nx.neighbors(G, index))
 
     neighbor_info_list = []
     for iter in neighbor_list:
@@ -39,7 +39,7 @@ def get_response(dataset, model_name, index, write_file_path):
     neighbor_info = "\none of its neighbors' feature:".join(neighbor_info_list)
 
     if model_name == "chatglm3-6b":
-        dashscope.api_key = "sk-6ed3b105aaac459097168fd8cca58513"
+        dashscope.api_key = "sk-946342daa7234baeb39287866be76505"
         messages=[
             {
                 'role': 'user',
@@ -140,10 +140,12 @@ def evaluate(file_path, dataset):
         writer.writerow([f'Accuracy: {accuracy:.3f}', f'F1 Score: {f1:.3f}'])
 
 
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="citeseer")
+    parser.add_argument("--dataset", type=str, default="cora")
     parser.add_argument("--model_name", type=str, default="chatglm3-6b")
     parser.add_argument("--device", type=str, default="cpu")
 
@@ -154,12 +156,14 @@ if __name__ == '__main__':
     graph_data = load_graph_dataset(args.dataset, device)
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
 
+    test_indexes = [0,1]
+
 
     # Create csv file
-    raw_neighbor_predfolder = "../results/LLMPredictor/llm_raw_neighbors"
-    file_path = f"{raw_neighbor_predfolder}/{args.model_name}/{args.dataset}.csv"
-    os.makedirs(raw_neighbor_predfolder, exist_ok=True)
-    os.makedirs(f"{raw_neighbor_predfolder}/{args.model_name}", exist_ok=True)
+    lm_neighbor_predfolder = "../results/LLMPredictor/llm_lm_neighbors"
+    file_path = f"{lm_neighbor_predfolder}/{args.model_name}/{args.dataset}.csv"
+    os.makedirs(lm_neighbor_predfolder, exist_ok=True)
+    os.makedirs(f"{lm_neighbor_predfolder}/{args.model_name}", exist_ok=True)
 
     has_inferenced_index = []
     if os.path.exists(file_path):
