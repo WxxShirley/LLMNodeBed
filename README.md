@@ -19,16 +19,20 @@ In terms of implementation and engineering, unlike existing LLM+Graph benchmarks
   * **Performance** LLMs generate higher-quality text representations compared to LMs, as shown by improved results in downstream task, i.e., node classification. This is especially evident in datasets such as arXiv, which includes 40 categories and demands highly discriminative node representations.
   * **Efficiency** Although LLMs improve performance in textual representation learning, they require extensive encoding time. For example, encoding arXiv data with LLMs (13B parameters) takes over **5 hours**. Additionally, LLMs necessitate a high embedding dimension (4096 or 5120), whereas LMs can reduce memory usage significantly with dimensions of 768 or 1024.
 
-<!-- ![performance](README.assets/LLMEncoder/gnn_performance.jpg) -->
+![performance](README.assets/LLMEncoder/gnn_performance.jpg) 
 <img src="README.assets/LLMEncoder/gnn_performance2.jpg" width="70%"/>
 <img src="README.assets/LLMEncoder/emb_time.jpg" width="80%"/>
 
 
-- [ ] TAPE Implementation and Experiments
+- [x] TAPE Implementation and Experiments
   * The TA version of TAPE, which uses only each node's original text followed by a decoupled LM+GNN architecture, has completed experiments.
   * The full version of TAPE requires an LLM to generate reasoning explanations for each node in text format, which is quite **resource-intensive**. We are currently conducting experiments to investigate: i) **whether performance is significantly influenced by the capabilities of the LLMs** (e.g., the original TAPE paper relies on GPT-3.5-turbo), and ii) **the effectiveness-cost balance of using LLMs as text generators**
 
-- [ ] OFA Implementation and Experiments
+
+<img src="README.assets/LLMEncoder/tape.jpg" width="90%" />
+
+
+- [ ] ZeroG Implementation and Experiments
 
 
 ### **RQ2 How Effective Are LLMs as Predictors?**
