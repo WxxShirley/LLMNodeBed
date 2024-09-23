@@ -112,3 +112,14 @@ LM_NEIGHBOR_PROMPTS = {
     "citeseer": CITESEER_LM_NEIGHBOR,
     "instagram": INSTAGRAM_LM_NEIGHBOR,
 }
+
+
+CORA_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Based on these inforamtion, Which of the following sub-categories of AI does this paper(this node) belong to? Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
+CITESEER_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following topic does this scientific publication talk about? Here are the 3 categories: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2. Experimental category usually refers to Experimentally induced diabetes, Diabetes Mellitus Type 1 usually means the content of the paper is about Diabetes Mellitus Type 1, Diabetes Mellitus Type 2 usually means the content of the paper is about Diabetes Mellitus Type 2. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
+INSTAGRAM_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this instagram user belong to? Here are the 2 categories: Normal Users, Commercial Users. Reply only one category that you think this paper might belong to. Only reply the category name I give of the category: Normal Users, Commercial Users, without any other words.\n\nAnswer: """
+
+LLM_NEIGHBOR_PROMPTS = {
+    "cora": CORA_LLM_NEIGHBOR,
+    "citeseer": CITESEER_LLM_NEIGHBOR,
+    "instagram": INSTAGRAM_LLM_NEIGHBOR,
+}
