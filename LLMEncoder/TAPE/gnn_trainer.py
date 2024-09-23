@@ -43,12 +43,12 @@ class GNNTrainer():
             ).to(torch.float32)
         elif self.feature_type == 'E':
             print("Loading pretrained LM features (explanations) ...")
-            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}2/{cfg.lm.model.short_name}.emb"
+            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}{cfg.lm.train.llm_name}/{cfg.lm.model.short_name}.emb"
             print(f"LM_emb_path: {LM_emb_path}")
             features = torch.from_numpy(np.array(
                 np.memmap(LM_emb_path, mode='r',
                           dtype=np.float16,
-                          shape=(self.num_nodes, 768)))
+                          shape=(self.num_nodes, 1024)))
             ).to(torch.float32)
         else:
             print(

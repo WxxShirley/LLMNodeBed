@@ -25,9 +25,10 @@ def run(cfg):
         df = pd.DataFrame(all_acc)
         for f in df.keys():
             df_ = pd.DataFrame([r for r in df[f]])
-            print(f"[{f}] TestAcc: {df_['test_acc'].mean():.3f} ± {df_['test_acc'].std():.3f}, TestF1: {df_['test_f1'].mean():.3f} ± {df_['test_f1'].std():.3f}")
+            print(f"[{f}] TestAcc: {df_['test_acc'].mean():.2f} ± {df_['test_acc'].std():.2f}, TestF1: {df_['test_f1'].mean():.2f} ± {df_['test_f1'].std():.2f}")
             results.append({
                 'dataset': cfg.dataset,
+                'llm_name': cfg.lm.train.llm_name,
                 'num_layers': cfg.gnn.model.num_layers,
                 'hidden_dim': cfg.gnn.model.hidden_dim,
                 'dropout': cfg.gnn.train.dropout,
@@ -38,9 +39,8 @@ def run(cfg):
 
     # Write results to CSV
     with open('../../results/LLMEncoder/TAPE/results.csv', 'a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=['dataset', 'num_layers', 'hidden_dim', 'dropout', 'test_acc', 'test_f1'])
+        writer = csv.DictWriter(file, fieldnames=['dataset', 'llm_name', 'num_layers', 'hidden_dim', 'dropout', 'test_acc', 'test_f1'])
         # writer.writeheader()
-        
         writer.writerow(results[-1])
 
 
