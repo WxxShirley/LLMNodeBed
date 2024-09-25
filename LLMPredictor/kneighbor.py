@@ -4,6 +4,7 @@ from sklearn.neighbors import kneighbors_graph
 import sys
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
+import csv
 
 sys.path.append("../")
 from common import RAW_NEIGHBOR_PROMPTS as PROMPT_DICT
@@ -26,22 +27,10 @@ def kneighbor_index(dataset):
     return k_neighbors
 
 
-def extract_common_values(dict1, dict2):
-    common_values = {}
+
+
+def oneneighbor_index(dataset):
     
-    for key in dict1.keys() & dict2.keys():
-
-        common_list = list(set(dict1[key]) & set(dict2[key]))
-        if common_list: 
-            common_values[key] = common_list
-        else:
-            common_values[key] = []
-
-    return common_values
-
-
-def k_1_neighbor_intersection(dataset):
-    k_neighbors = kneighbor_index(dataset)
     data = load_graph_dataset (dataset_name = dataset, device="cpu")
 
     G = to_networkx(data)
@@ -57,14 +46,51 @@ def k_1_neighbor_intersection(dataset):
     #     max_length[1] = len(one_neighbors[index]) if len(one_neighbors[index])>max_length[1] else max_length[1]
     
     # print (max_length)
+
+    return one_neighbors
+
+def extract_common_values(dict1, dict2):
+    common_values = {}
+    
+    for key in dict1.keys() & dict2.keys():
+
+        common_list = list(set(dict1[key]) & set(dict2[key]))
+        if common_list: 
+            common_values[key] = common_list
+        else:
+            common_values[key] = []
+
+    return common_values
+
+def k_1_neighbor_intersection(dataset):
+    k_neighbors = kneighbor_index(dataset)
+   
+    one_neighbors = oneneighbor_index(dataset)
+
     common_neighbors = extract_common_values(k_neighbors, one_neighbors)
     
     return common_neighbors
 
 
-if __name__ == '__main__':
-    common_neighbors = k_1_neighbor_intersection ("cora")
-    print(common_neighbors[1])
+def save_index(dataset):
+    os.makedirs("../datasets/k-1-neighbors", exist_ok=True)
+    file_path = f"../datasets/k-1-neighbors/{dataset}.csv"
+    common_neighbors = k_1_neighbor_intersection(dataset)
 
-    k_neighbors = kneighbor_index("cora")
-    print(k_neighbors[1])
+    with open(file_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        for key, value in common_neighbors.items():
+            writer.writerow([key, value])
+            
+        
+
+if __name__ == '__main__':
+    dataset = "instagram"
+    common_neighbors = k_1_neighbor_intersection (dataset)
+    print("\n1")
+    k_neighbors = kneighbor_index(dataset)
+    print("\n2")
+    one_neighbors = oneneighbor_index(dataset)
+    print("\n3")
+    print(common_neighbors)
+    save_index(dataset)
