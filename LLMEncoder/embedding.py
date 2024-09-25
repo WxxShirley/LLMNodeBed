@@ -7,8 +7,6 @@ import argparse
 import sys
 sys.path.append("../")
 from common import get_cur_time
-# from tqdm.autonotebook import trange
-# import numpy as np
 
 
 def mean_pooling(model_output, attention_mask):
@@ -26,8 +24,8 @@ def mean_pooling_llm(token_embeddings, attention_mask):
 def lm_forwad(data):
     text_embeddings = []
     with torch.no_grad():
-        # for text in tqdm(data.raw_texts, desc="Generating LM Embedding"):
-        for text in data.raw_texts:
+        for text in tqdm(data.raw_texts, desc="Generating LM Embedding"):
+        # for text in data.raw_texts:
             # We can also implement a parallel mode for generating embeddings. However, I've noticed that the speed tends to be somewhat slower:
             # for st_index in trange(0, len(data.raw_texts), batch_size, desc="Generating LM Embedding"):
             # text_batch = data.raw_texts[st_index: st_index + batch_size]
@@ -71,9 +69,10 @@ if __name__ == "__main__":
 
     parser.add_argument("--dataset", type=str, default="cora", choices=['cora', "pubmed", "citeseer", "wikics", "arxiv", "instagram", "reddit"])
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--encoder_type", type=str, default="LM", choices=["LLM", "LM"])
-    parser.add_argument("--lm_name", type=str, default="e5-large", choices=["e5-large", "SentenceBert", "MiniLM", "bert", "roberta"])
-    parser.add_argument("--llm_name", type=str, default="Mistral-7B", choices=["Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"])
+    parser.add_argument("--encoder_name", type=str, default="e5-large", choices=[
+        "e5-large", "SentenceBert", "MiniLM", "roberta",
+        "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"
+    ])
     parser.add_argument("--use_cls", type=int, default=1)
     parser.add_argument("--save_emb", type=int, default=1)
     
@@ -85,7 +84,6 @@ if __name__ == "__main__":
     lm_name_dict = {
         "MiniLM": "sentence-transformers/all-MiniLM-L6-v2", # 22M
         "SentenceBert": "sentence-transformers/multi-qa-distilbert-cos-v1", # 66M
-        "bert": "bert-base-uncased", # 109M
         "roberta": "sentence-transformers/all-roberta-large-v1", # 355M
         "e5-large": "intfloat/e5-large-v2", # 355M
     }
@@ -101,30 +99,31 @@ if __name__ == "__main__":
     print('## Starting Time:', get_cur_time(), flush=True)
     print(args, "\n")
     
-    if args.encoder_type == "LM":
-        assert args.lm_name in lm_name_dict.keys()
-        lm_fullname = lm_name_dict[args.lm_name]
+    if args.encoder_name in lm_name_dict.keys():
+        lm_fullname = lm_name_dict[args.encoder_name]
         tokenizer = AutoTokenizer.from_pretrained(lm_fullname)
         lm_model = AutoModel.from_pretrained(lm_fullname).to(device)
         trainable_params = sum(p.numel() for p in lm_model.parameters() if p.requires_grad)
-        print(f"[{args.lm_name}] Number of parameters {trainable_params}")
+        print(f"[{args.encoder_name}] Number of parameters {trainable_params}")
         generated_node_emb = lm_forwad(graph_data)
-    elif args.encoder_type == "LLM":
-        assert args.llm_name in llm_path_dict.keys()
-        llm_path = llm_path_dict[args.llm_name]
+    elif args.encoder_name in llm_path_dict.keys():
+        llm_path = llm_path_dict[args.encoder_name]
 
         llm_tokenizer = AutoTokenizer.from_pretrained(llm_path)
         llm_tokenizer.pad_token_id = 0
         llm_tokenizer.padding_side = "right"
-        llm_tokenizer.truncation_side = 'right'
+        llm_tokenizer.truncation_side = "right"
 
         llm_model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16).to(device)
         generated_node_emb = llm_forward(graph_data)
+    else:
+        raise NotImplementedError(f"Encoder Name {args.encoder_name} is Not Supported!\nYou can either change the encoder or implement it in LM (or LLM) dictionaries!")
     
-    print(f"[{args.dataset}-{args.llm_name if args.encoder_type == 'LLM' else args.lm_name}] Node Embedding Shape {generated_node_emb.shape}")
+    print(f"[{args.dataset}-{args.encoder_name}] Node Embedding Shape {generated_node_emb.shape}")
     if args.save_emb:
-        write_dir = f"../datasets/{args.lm_name if args.encoder_type == 'LM' else args.llm_name}"
+        write_dir = f"../datasets/{args.encoder_name}"
         os.makedirs(write_dir, exist_ok=True)
+        # suffix = "" if (args.encoder_name in llm_path_dict.keys() or args.use_cls == 1) else "_mean"
         torch.save(generated_node_emb, f"{write_dir}/{args.dataset}.pt")
     
     print('\n## Finishing Time:', get_cur_time(), flush=True)

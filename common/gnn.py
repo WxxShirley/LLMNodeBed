@@ -22,7 +22,7 @@ def build_conv(conv_type: str):
 
 
 class GNNEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, n_layers=2, gnn_type="GAT", dropout=0.0):
+    def __init__(self, input_dim, hidden_dim, output_dim, n_layers=2, gnn_type="GAT", dropout=0.0, use_softmax=0):
         super().__init__()
 
         conv = build_conv(gnn_type)
@@ -32,6 +32,7 @@ class GNNEncoder(nn.Module):
         self.output_dim = output_dim
         self.dropout = dropout
         self.act = nn.LeakyReLU()
+        self.use_softmax = use_softmax
         
         if n_layers == 1:
             self.conv_layers = nn.ModuleList([conv(input_dim, output_dim)])
@@ -42,6 +43,7 @@ class GNNEncoder(nn.Module):
             for _ in range(n_layers - 2):
                 self.conv_layers.append(conv(hidden_dim, hidden_dim))
             self.conv_layers.append(conv(hidden_dim, output_dim))
+
         self.bns = nn.ModuleList([nn.BatchNorm1d(hidden_dim) for _ in range(n_layers-1)])
         
     def reset_parameters(self):
@@ -58,4 +60,8 @@ class GNNEncoder(nn.Module):
             x = F.dropout(x, p=self.dropout, training=self.training)
             
         node_emb = self.conv_layers[-1](x, edge_index)
+        
+        if self.use_softmax:
+            return node_emb.log_softmax(dim=-1)
+        
         return node_emb
