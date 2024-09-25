@@ -1,5 +1,18 @@
-#!/bin/bash
+# LLM as Enhancers 
 
+## LLM for Embedding Generation 
+
+Relevant files are `embedding.py` and `main.py`:
+
+* **`embedding.py`** This file utilizes various LMs and LLMs to generate node embeddings, saving the results in the `/datasets/` folder.
+
+* **`main.py`** This file runs GNNs on a specified dataset for node classification tasks, allowing you to evaluate performance. You can specify the node encoder, which can be either an LM or an LLM.
+
+### Example Scripts 
+
+Please refer to `run.sh` for example commands:
+
+```bash
 # Generate Embedding 
 #  - Specify dataset's name (`dataset`), encoder's name (`encoder_name`), and pooling method (`use_cls`)
 #  - For LLMs, please remember to set `use_cls=0`
@@ -15,16 +28,10 @@ python3 main.py --dataset=cora
 python3 main.py --dataset=cora --encoder_name=e5-large 
 # Additional GNN configurations
 python3 main.py --dataset=cora --encoder_name=e5-large --gnn_type=GCN --n_layers=2 --hidden_dim=128 --dropout=0.5
+```
 
 
-# Commands of GridSearch (take GCN and cora dataset as an example)
-HIDDEN_DIMS=(32 64 128 256 512)
-LAYERS=(2 3 4)
-DROPOUTS=(0.3 0.5 0.7)
-for HIDDEN_DIM in "${HIDDEN_DIMS[@]}"; do 
-    for LAYER in "${LAYERS[@]}"; do 
-        for DROPOUT in "${DROPOUTS[@]}"; do  
-            python main.py --dataset=cora --encoder_name=e5-large --hidden_dim=$HIDDEN_DIM --n_layers=$LAYER --dropout=$DROPOUT 
-        done
-    done 
-done 
+### (TODO) Performance and Observations 
+
+
+

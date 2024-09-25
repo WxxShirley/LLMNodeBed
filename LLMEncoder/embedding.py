@@ -123,7 +123,6 @@ if __name__ == "__main__":
     if args.save_emb:
         write_dir = f"../datasets/{args.encoder_name}"
         os.makedirs(write_dir, exist_ok=True)
-        # suffix = "" if (args.encoder_name in llm_path_dict.keys() or args.use_cls == 1) else "_mean"
         torch.save(generated_node_emb, f"{write_dir}/{args.dataset}.pt")
     
     print('\n## Finishing Time:', get_cur_time(), flush=True)
