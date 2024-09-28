@@ -22,7 +22,8 @@ def build_conv(conv_type: str):
 
 
 class GNNEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, n_layers=2, gnn_type="GAT", dropout=0.0, use_softmax=0):
+    def __init__(self, input_dim, hidden_dim, output_dim, n_layers=2, gnn_type="GAT", dropout=0.0, use_softmax=0, 
+                 batch_norm=0, residual_conn=1, jump_knowledge=0):
         super().__init__()
 
         conv = build_conv(gnn_type)
@@ -31,8 +32,11 @@ class GNNEncoder(nn.Module):
         self.hidden_dim = hidden_dim 
         self.output_dim = output_dim
         self.dropout = dropout
-        self.act = nn.LeakyReLU()
+        self.act = F.relu
         self.use_softmax = use_softmax
+        self.batch_norm = batch_norm
+        self.residual_conn = residual_conn
+        self.jump_knowledge = jump_knowledge
         
         if n_layers == 1:
             self.conv_layers = nn.ModuleList([conv(input_dim, output_dim)])
@@ -53,15 +57,29 @@ class GNNEncoder(nn.Module):
             bn.reset_parameters()
     
     def forward(self, x, edge_index):
+        global_x = 0 
+
         for i, graph_conv in enumerate(self.conv_layers[:-1]):
-            x = graph_conv(x, edge_index)
-            x = self.bns[i](x)
+            # Check whether it needs to add residual connection
+            if self.residual_conn and i > 0:
+                x = graph_conv(x, edge_index) + x 
+            else:
+                x = graph_conv(x, edge_index)
+            
+            # Check whether it needs to add batch normalization
+            if self.batch_norm:
+                x = self.bns[i](x)
             x = self.act(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
-            
-        node_emb = self.conv_layers[-1](x, edge_index)
+
+            global_x += x 
+        
+        if self.jump_knowledge:
+            x = global_x
+
+        x = self.conv_layers[-1](x, edge_index)
         
         if self.use_softmax:
-            return node_emb.log_softmax(dim=-1)
+            return x.log_softmax(dim=-1)
         
-        return node_emb
+        return x

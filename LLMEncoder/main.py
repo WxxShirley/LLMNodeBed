@@ -46,15 +46,19 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_dim", type=int, default=256)
     parser.add_argument("--dropout", type=float, default=0.5)
     parser.add_argument("--use_softmax", type=int, default=0)
+    parser.add_argument("--residual_conn", type=int, default=1)
+    parser.add_argument("--jump_knowledge", type=int, default=0)
+    parser.add_argument("--batch_norm", type=int, default=0)
 
     # Learning configuration
     parser.add_argument("--learning_rate", type=float, default=1e-2)
+    parser.add_argument("--weight_decay", type=float, default=5e-4)
     parser.add_argument("--epochs", type=int, default=500)
-    parser.add_argument("--patience", type=int, default=50)
+    parser.add_argument("--patience", type=int, default=100)
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--run_times", type=int, default=5)
-    parser.add_argument("--print_freq", type=int, default=10)
+    parser.add_argument("--print_freq", type=int, default=50)
 
     parser.add_argument("--write_result", type=int, default=1)
 
@@ -63,6 +67,7 @@ if __name__ == "__main__":
 
     device = torch.device(args.device)
     graph_data = load_graph_dataset(args.dataset, device, args.encoder_name if len(args.encoder_name) else "shallow")
+    print(graph_data.x.shape)
 
     final_acc_list, final_f1_list, timer_list = [], [], []
 
@@ -78,13 +83,16 @@ if __name__ == "__main__":
             n_layers=args.n_layers,
             gnn_type=args.gnn_type,
             dropout=args.dropout,
-            use_softmax=args.use_softmax
+            use_softmax=args.use_softmax,
+            batch_norm=args.batch_norm,
+            residual_conn=args.residual_conn,
+            jump_knowledge=args.jump_knowledge
         ).to(device)
         if i == 1:
             trainable_params = sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)
             print(f"[GNN] Number of parameters {trainable_params}")
 
-        optimizer = torch.optim.Adam(gnn_model.parameters(), lr=args.learning_rate)
+        optimizer = torch.optim.Adam(gnn_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     
         best_eval_acc = best_test_acc = 0.0
         best_eval_f1 = best_test_f1 = 0.0
