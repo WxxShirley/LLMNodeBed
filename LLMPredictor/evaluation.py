@@ -25,7 +25,7 @@ def evaluate(file_path, dataset):
     with open(file_path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
-            if "Accuracy" in str(row[0]):
+            if str(row[0][0]) > '9' or str(row[0][0]) < '0':
                 continue
             if dataset == "citeseer":
                 if (row[2][:2] in ["ML", "IR", "DB", "HC", "AI"]):

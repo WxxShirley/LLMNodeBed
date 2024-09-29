@@ -41,6 +41,8 @@ def oneneighbor_index(dataset):
 
     for index in range(0, num_node):
         neighbor_list = list(nx.neighbors(G, index))
+        if dataset == "instagram":
+            one_neighbors[index] = neighbor_list[1:]
         one_neighbors[index] = neighbor_list
     #     max_length[0] = index if len(one_neighbors[index])>max_length[1] else max_length[0]
     #     max_length[1] = len(one_neighbors[index]) if len(one_neighbors[index])>max_length[1] else max_length[1]
@@ -68,14 +70,15 @@ def k_1_neighbor_intersection(dataset):
     one_neighbors = oneneighbor_index(dataset)
 
     common_neighbors = extract_common_values(k_neighbors, one_neighbors)
-    
+
+
     return common_neighbors
 
 
 def save_index(dataset):
-    os.makedirs("../datasets/k-1-neighbors", exist_ok=True)
-    file_path = f"../datasets/k-1-neighbors/{dataset}.csv"
-    common_neighbors = k_1_neighbor_intersection(dataset)
+    os.makedirs("../datasets/1-neighbors", exist_ok=True)
+    file_path = f"../datasets/1-neighbors/{dataset}.csv"
+    common_neighbors = oneneighbor_index(dataset)
 
     with open(file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
@@ -85,12 +88,12 @@ def save_index(dataset):
         
 
 if __name__ == '__main__':
-    dataset = "instagram"
-    common_neighbors = k_1_neighbor_intersection (dataset)
-    print("\n1")
-    k_neighbors = kneighbor_index(dataset)
-    print("\n2")
-    one_neighbors = oneneighbor_index(dataset)
-    print("\n3")
-    print(common_neighbors)
+    dataset = "citeseer"
+    # common_neighbors = k_1_neighbor_intersection (dataset)
+    # print("\n1")
+    # k_neighbors = kneighbor_index(dataset)
+    # print("\n2")
+    # one_neighbors = oneneighbor_index(dataset)
+    # print("\n3")
+    # print(common_neighbors)
     save_index(dataset)

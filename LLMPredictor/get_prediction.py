@@ -1,4 +1,5 @@
 from openai import OpenAI
+import ast
 import os
 import argparse
 import torch
@@ -66,11 +67,13 @@ class prediction:
             # k_1_neighbor_info_list = []
             k_1_neighbor_list = []
             k_1_neighbor_file_path = f"../datasets/k-1-neighbors/{self.dataset}.csv"
+            
             with open(k_1_neighbor_file_path, 'r') as file:
                 reader = csv.reader(file)
                 for row in reader:
-                    if row[0] == self.index:
-                        k_1_neighbor_list = row[1]
+                    
+                    if int(row[0]) == self.index:
+                        k_1_neighbor_list = ast.literal_eval(row[1])
             if len(k_1_neighbor_list) == 0:
                 k_1_neighbor_list = list(nx.neighbors(G, self.index))[:5]
             

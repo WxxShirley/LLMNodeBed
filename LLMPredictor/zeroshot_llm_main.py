@@ -23,7 +23,7 @@ from common import load_graph_dataset, compute_acc_and_f1
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="citeseer")
+    parser.add_argument("--dataset", type=str, default="cora")
     # chatglm3-6b   deepseek-chat   qwen-turbo
     parser.add_argument("--model_name", type=str, default="qwen-turbo")
     parser.add_argument("--device", type=str, default="cpu")
@@ -35,6 +35,7 @@ if __name__ == "__main__":
     device = torch.device(args.device)
     graph_data = load_graph_dataset(args.dataset, device)
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
+
 
     # Create csv file
 
@@ -60,10 +61,6 @@ if __name__ == "__main__":
 
     write_file = open(file_path, 'a', newline='')
 
-
-    #instance
- 
-    # Make zero-shot predictions
 
 
     for index in test_indexes:
