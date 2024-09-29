@@ -23,9 +23,9 @@ from common import load_graph_dataset, compute_acc_and_f1
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="instagram")
+    parser.add_argument("--dataset", type=str, default="citeseer")
     # chatglm3-6b   deepseek-chat   qwen-turbo
-    parser.add_argument("--model_name", type=str, default="chatglm3-6b")
+    parser.add_argument("--model_name", type=str, default="qwen-turbo")
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--prediction_type", type=str, default="lm")
 
@@ -35,8 +35,6 @@ if __name__ == "__main__":
     device = torch.device(args.device)
     graph_data = load_graph_dataset(args.dataset, device)
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
-    
-    test_indexes = [1,2,3,4]
 
     # Create csv file
 
@@ -66,6 +64,8 @@ if __name__ == "__main__":
     #instance
  
     # Make zero-shot predictions
+
+
     for index in test_indexes:
         if index in has_inferenced_index:
             continue
