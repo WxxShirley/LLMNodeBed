@@ -147,7 +147,7 @@ class prediction:
                 # sk-b8659491d3fc429b982b9a04f9fd55c0 (xixi)
                 # sk-946342daa7234baeb39287866be76505 (xixi)
                 # sk-6ed3b105aaac459097168fd8cca58513 (fangzhou)
-                api_key="sk-0b8693b926d24c299458c8b607f8c46f",
+                api_key="sk-6ed3b105aaac459097168fd8cca58513",
                 base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
             )
             completion = client.chat.completions.create(
