@@ -3,4 +3,4 @@ from .gnn import GNNEncoder
 from .prompt import ZEROSHOT_PROMPTS, EXPLANATION_PROMPTS, RAW_NEIGHBOR_PROMPTS, LM_NEIGHBOR_PROMPTS
 from .utils import set_seed, get_cur_time, array_mean_std
 from .metrics import *
-from .lm import BertClassifier, BertClaInfModel
+from .lm import BertClassifier, BertClaInfModel, TextEncoder

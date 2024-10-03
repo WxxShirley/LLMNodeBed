@@ -46,7 +46,7 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_dim", type=int, default=256)
     parser.add_argument("--dropout", type=float, default=0.5)
     parser.add_argument("--use_softmax", type=int, default=0)
-    parser.add_argument("--residual_conn", type=int, default=1)
+    parser.add_argument("--residual_conn", type=int, default=0)
     parser.add_argument("--jump_knowledge", type=int, default=0)
     parser.add_argument("--batch_norm", type=int, default=0)
 
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--run_times", type=int, default=5)
     parser.add_argument("--print_freq", type=int, default=50)
 
-    parser.add_argument("--write_result", type=int, default=1)
+    parser.add_argument("--write_result", type=int, default=0)
 
     args = parser.parse_args()
     print(args)
@@ -132,4 +132,4 @@ if __name__ == "__main__":
     if args.write_result:
         import csv
         writer = csv.writer(write_file)
-        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.use_softmax, args.encoder_name, f"{acc_mean:.2f}±{acc_std:.2f}", f"{f1_mean:.2f}±{f1_std:.2f}", trainable_params, f"{sum(timer_list)/len(timer_list):.3f}s"])
+        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.encoder_name, args.batch_norm, args.residual_conn, f"{acc_mean:.2f}±{acc_std:.2f}", f"{f1_mean:.2f}±{f1_std:.2f}", trainable_params, f"{sum(timer_list)/len(timer_list):.3f}s"])

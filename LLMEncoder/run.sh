@@ -18,13 +18,17 @@ python3 main.py --dataset=cora --encoder_name=e5-large --gnn_type=GCN --n_layers
 
 
 # Commands of GridSearch (take GCN and cora dataset as an example)
-HIDDEN_DIMS=(32 64 128 256 512)
-LAYERS=(2 3 4)
+HIDDEN_DIMS=(64 128 256 512)
+LAYERS=(2 3)
 DROPOUTS=(0.3 0.5 0.7)
 for HIDDEN_DIM in "${HIDDEN_DIMS[@]}"; do 
     for LAYER in "${LAYERS[@]}"; do 
         for DROPOUT in "${DROPOUTS[@]}"; do  
             python main.py --dataset=cora --encoder_name=e5-large --hidden_dim=$HIDDEN_DIM --n_layers=$LAYER --dropout=$DROPOUT 
+            # architecture (batch_norm, residual_conn, etc) search
+            # reference from "Classic GNNs are Strong Baselines: Reassessing GNNs for Node Classification"
+            python main.py --dataset=cora --encoder_name=e5-large --hidden_dim=$HIDDEN_DIM --n_layers=$LAYER --dropout=$DROPOUT --batch_norm=1 
+            python main.py --dataset=cora --encoder_name=e5-large --hidden_dim=$HIDDEN_DIM --n_layers=$LAYER --dropout=$DROPOUT --batch_norm=0 --residual_conn=1 
         done
     done 
 done 
