@@ -38,22 +38,27 @@ if __name__ == "__main__":
 
     parser.add_argument("--dataset", type=str, default="cora")
     # Encoder
-    parser.add_argument("--emb_type", type=str, default="shallow", choices=["LM", "LLM", "shallow"])
-    parser.add_argument("--emb_model", type=str, default="e5-large")
-
+    parser.add_argument("--encoder_name", type=str, default="", choices=["", "shallow", "e5-large", "SentenceBert", "MiniLM", "roberta", "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"])
+    
     # GNN configuration
-    parser.add_argument("--gnn_type", type=str, default="GCN", choices=["GCN", "GAT", "SAGE", "GIN", "TransformerConv"])
+    parser.add_argument("--gnn_type", type=str, default="GCN", choices=["GCN", "GAT", "SAGE", "TransformerConv"])
     parser.add_argument("--n_layers", type=int, default=2)
     parser.add_argument("--hidden_dim", type=int, default=256)
     parser.add_argument("--dropout", type=float, default=0.5)
+    parser.add_argument("--use_softmax", type=int, default=0)
+    parser.add_argument("--residual_conn", type=int, default=0)
+    parser.add_argument("--jump_knowledge", type=int, default=0)
+    parser.add_argument("--batch_norm", type=int, default=0)
 
     # Learning configuration
     parser.add_argument("--learning_rate", type=float, default=1e-2)
+    parser.add_argument("--weight_decay", type=float, default=5e-4)
     parser.add_argument("--epochs", type=int, default=500)
-    parser.add_argument("--patience", type=int, default=50)
+    parser.add_argument("--patience", type=int, default=100)
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--run_times", type=int, default=5)
+    parser.add_argument("--print_freq", type=int, default=50)
 
     parser.add_argument("--write_result", type=int, default=0)
 
@@ -61,9 +66,10 @@ if __name__ == "__main__":
     print(args)
 
     device = torch.device(args.device)
-    graph_data = load_graph_dataset(args.dataset, device, "shallow" if args.emb_type == "shallow" else args.emb_model)
+    graph_data = load_graph_dataset(args.dataset, device, args.encoder_name if len(args.encoder_name) else "shallow")
+    print(graph_data.x.shape)
 
-    final_acc_list, final_f1_list = [], []
+    final_acc_list, final_f1_list, timer_list = [], [], []
 
     if args.write_result:
         os.makedirs("../results/LLMEncoder", exist_ok=True)
@@ -76,20 +82,23 @@ if __name__ == "__main__":
             output_dim=len(graph_data.label_name),
             n_layers=args.n_layers,
             gnn_type=args.gnn_type,
-            dropout=args.dropout
+            dropout=args.dropout,
+            use_softmax=args.use_softmax,
+            batch_norm=args.batch_norm,
+            residual_conn=args.residual_conn,
+            jump_knowledge=args.jump_knowledge
         ).to(device)
         if i == 1:
             trainable_params = sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)
             print(f"[GNN] Number of parameters {trainable_params}")
 
-        optimizer = torch.optim.Adam(gnn_model.parameters(), lr=args.learning_rate)
+        optimizer = torch.optim.Adam(gnn_model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
     
         best_eval_acc = best_test_acc = 0.0
         best_eval_f1 = best_test_f1 = 0.0
-        timer, counter = [], 0
+        st_time, counter = time.time(), 0
 
         for epoch in range(1, args.epochs+1):
-            st_time = time.time()
             cur_loss = gnn_train()
             train_acc, val_acc, test_acc = gnn_test()[0]
             train_f1, val_f1, test_f1 = gnn_test()[1]
@@ -103,15 +112,16 @@ if __name__ == "__main__":
             if val_f1 > best_eval_f1:
                 best_eval_f1 = val_f1
                 best_test_f1 = test_f1
-        
-            print(f"Epoch {epoch:03d}    Train acc {train_acc:.3f} Val acc {val_acc:.3f} Test acc {test_acc:.3f}  Train F1 {train_f1:.3f} Val F1 {val_f1:.3f} Test F1 {test_f1:.4f}")
-            timer.append(time.time() - st_time)
+            
+            if epoch % args.print_freq == 0:
+                print(f"Epoch {epoch:03d}   Train acc {train_acc:.3f} Val acc {val_acc:.3f} Test acc {test_acc:.3f}  Train F1 {train_f1:.3f} Val F1 {val_f1:.3f} Test F1 {test_f1:.4f}")
             
             # Early stopping
             if counter >= args.patience:
                 break
-    
-        print(f'[Times {i}] Test Acc {best_test_acc:.3f}  Test F1 {best_test_f1:.3f} Avg Time/Epoch {sum(timer)/len(timer):.4f}s\n')
+        
+        timer_list.append(round(time.time() - st_time, 3))
+        print(f'[Times {i}] Test Acc {best_test_acc:.2f}  Test F1 {best_test_f1:.2f} Time {timer_list[-1]:.3f}s\n')
         final_acc_list.append(best_test_acc)
         final_f1_list.append(best_test_f1)
     
@@ -122,4 +132,4 @@ if __name__ == "__main__":
     if args.write_result:
         import csv
         writer = csv.writer(write_file)
-        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.emb_type, args.emb_model if args.emb_type != "shallow" else "-", f"{acc_mean}±{acc_std}", f"{f1_mean}±{f1_std}", trainable_params])
+        writer.writerow([args.gnn_type, args.n_layers, args.hidden_dim, args.dropout, args.encoder_name, args.batch_norm, args.residual_conn, f"{acc_mean:.2f}±{acc_std:.2f}", f"{f1_mean:.2f}±{f1_std:.2f}", trainable_params, f"{sum(timer_list)/len(timer_list):.3f}s"])
