@@ -23,9 +23,9 @@ from common import load_graph_dataset, compute_acc_and_f1
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="cora")
+    parser.add_argument("--dataset", type=str, default="instagram")
     # chatglm3-6b   deepseek-chat   qwen-turbo
-    parser.add_argument("--model_name", type=str, default="qwen-turbo")
+    parser.add_argument("--model_name", type=str, default="chatglm3-6b")
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--prediction_type", type=str, default="lm")
 
@@ -75,4 +75,4 @@ if __name__ == "__main__":
             print(f"[ERROR] {index} encounter error {e}")
 
     # Calculate acc and f1
-    evaluate(file_path, args.dataset)
+    evaluate(file_path, args.model_name, args.dataset)

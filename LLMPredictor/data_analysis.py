@@ -34,6 +34,24 @@ def acc_two_kinds_f1(file_path, dataset):
                     predict_labels.append(row[1][:2])
                 else:
                     predict_labels.append(row[1])
+            elif dataset == "cora" and model_name == "chatglm3-6b":
+                true_labels.append(row[2])
+                if "Rule" in row[1]:
+                    predict_labels.append("Rule_Learning")
+                elif "Neural" in row[1]:
+                    predict_labels.append("Neural_Networks")
+                elif "Case" in row[1]:
+                    predict_labels.append("Case_Based")
+                elif "Genetic" in row[1]:
+                    predict_labels.append("Genetic_Algorithms")
+                elif "Theory" in row[1]:
+                    predict_labels.append("Theory")
+                elif "Reinforcement" in row[1]:
+                    predict_labels.append("Reinforcement_Learning")
+                elif "Probabilistic" in row[1]:
+                    predict_labels.append("Probabilistic_Methods")
+                else:
+                    predict_labels.append(row[1])
             else:
                 true_labels.append(row[2])
                 predict_labels.append(row[1])
@@ -45,10 +63,14 @@ def acc_two_kinds_f1(file_path, dataset):
     with open(file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([f'Accuracy: {accuracy:.3f}, Weighted F1 Score: {weighted_f1:.3f}, Macro F1 Score:{macro_f1:.3f}'])
+    
+    return true_labels, predict_labels
 
 
 
 def bias_of_category(dataset, prediction_type, model_name, file_path):
+    true_labels, predict_labels = acc_two_kinds_f1(file_path, dataset)
+
     if dataset == "cora":
         labels = ["Rule_Learning", "Neural_Networks", "Case_Based", "Genetic_Algorithms", "Theory", "Reinforcement_Learning", "Probabilistic_Methods", "Others"]
     elif dataset == "citeseer":
@@ -59,21 +81,18 @@ def bias_of_category(dataset, prediction_type, model_name, file_path):
     true_labels_counting = [0] * len(labels)
     predict_labels_counting = [0] * len(labels)
 
-    with open(file_path, 'r') as file:
-        reader = csv.reader(file)
-        for row in reader:
-            if "Accuracy" in str(row[0]):
-                continue
-            else:
-                add_true = -1
-                add_predict = -1
-                for i in range(len(labels)):
-                    if row[2][:2] == labels[i][:2]:
-                        add_true = i
-                    if row[1][:2] == labels[i][:2]:
-                        add_predict = i
-                true_labels_counting[add_true] += 1
-                predict_labels_counting[add_predict] += 1
+
+    for index in range(len(predict_labels)):
+        add_true = -1
+        add_predict = -1
+        for i in range(len(labels)):
+            if predict_labels[index][:2] == labels[i][:2]:
+                add_predict = i
+            if true_labels[index][:2] == labels[i][:2]:
+                add_true = i
+        true_labels_counting[add_true] += 1
+        predict_labels_counting[add_predict] += 1
+                
 
     y = np.arange(len(labels))
     height = 0.35
@@ -140,9 +159,9 @@ def homophily_ratio(dataset):
 
 
 if __name__ == "__main__":
-    dataset = "instagram"
-    prediction_type = "none"
-    model_name = "qwen-turbo"
+    dataset = "citeseer"
+    prediction_type = "llm"
+    model_name = "deepseek-chat"
 
 
     if prediction_type == "none":
