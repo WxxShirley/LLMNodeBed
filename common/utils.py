@@ -21,3 +21,26 @@ def get_cur_time(timezone='Asia/Shanghai', t_format='%m-%d %H:%M:%S'):
 def array_mean_std(numbers):
     array = np.array(numbers)
     return np.round(np.mean(array), 3), np.round(np.std(array), 3)
+
+
+def normalize_adj_matrix(edge_index, num_nodes, device):
+    edge_index_self_loops = torch.stack(
+        [torch.arange(num_nodes), torch.arange(num_nodes)], dim=0
+    ).to(device)
+    edge_index = torch.cat([edge_index, edge_index_self_loops], dim=1)
+
+    adj = torch.sparse_coo_tensor(edge_index, torch.ones(edge_index.shape[1]).to(device), (num_nodes, num_nodes))
+
+    deg = torch.sparse.sum(adj, dim=1).to_dense()
+    deg_inv_sqrt = deg.pow(-0.5)
+    deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0.
+
+    adj_normalized = adj
+    deg_inv_sqrt_mat = torch.sparse_coo_tensor(
+        torch.arange(num_nodes).unsqueeze(0).repeat(2, 1).to(device), 
+        deg_inv_sqrt, (num_nodes, num_nodes))
+    
+    adj_normalized = torch.sparse.mm(
+            deg_inv_sqrt_mat, torch.sparse.mm(adj_normalized, deg_inv_sqrt_mat))
+
+    return adj_normalized
