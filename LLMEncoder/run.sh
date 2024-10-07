@@ -27,6 +27,7 @@ for HIDDEN_DIM in "${HIDDEN_DIMS[@]}"; do
             python main.py --dataset=cora --encoder_name=e5-large --hidden_dim=$HIDDEN_DIM --n_layers=$LAYER --dropout=$DROPOUT 
             # architecture (batch_norm, residual_conn, etc) search
             # reference from "Classic GNNs are Strong Baselines: Reassessing GNNs for Node Classification"
+            # `batch_norm` is set to 0 for Cora, Citeseer, and Pubmed
             python main.py --dataset=cora --encoder_name=e5-large --hidden_dim=$HIDDEN_DIM --n_layers=$LAYER --dropout=$DROPOUT --batch_norm=1 
             python main.py --dataset=cora --encoder_name=e5-large --hidden_dim=$HIDDEN_DIM --n_layers=$LAYER --dropout=$DROPOUT --batch_norm=0 --residual_conn=1 
         done
