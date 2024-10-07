@@ -1,8 +1,82 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from transformers import PreTrainedModel
+from transformers import PreTrainedModel, AutoTokenizer, AutoModel, AutoModelForCausalLM
 from transformers.modeling_outputs import TokenClassifierOutput
+
+
+def mean_pooling(model_output, attention_mask):
+    # from Sentence-Transformers official code "https://huggingface.co/sentence-transformers/all-mpnet-base-v2"
+    token_embeddings = model_output[0]
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
+
+def mean_pooling_llm(token_embeddings, attention_mask):
+    input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+    return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
+
+lm_name_dict = {
+    "MiniLM": "sentence-transformers/all-MiniLM-L6-v2", # 22M
+    "SentenceBert": "sentence-transformers/multi-qa-distilbert-cos-v1", # 66M
+    "roberta": "sentence-transformers/all-roberta-large-v1", # 355M
+    "e5-large": "intfloat/e5-large-v2", # 355M
+}
+
+llm_path_dict = {
+    "Qwen-3B": "/root/autodl-tmp/models/qwen/Qwen2___5-3B-Instruct", # 3B
+    "Mistral-7B": "/root/autodl-tmp/models/Mistral-7B/snapshots/Mistral-7B-Instruct-v0.2", # 7B
+    "Llama3-8B": "/root/autodl-tmp/models/LLM-Research/Meta-Llama-3-8B-Instruct", # 8B
+    "Vicuna-13B": "/root/autodl-tmp/models/Vicuna-13B/snapshots/Vicuna-13B-v1.5", # 13B
+    "Llama-13B": "/root/autodl-tmp/models/Llama2/Llama-2-13b-chat-hf" # 13B
+}
+
+
+class TextEncoder(nn.Module):
+    def __init__(self, encoder_name, device):
+        super(TextEncoder, self).__init__()
+
+        self.encoder_name = encoder_name
+        self.device = device
+
+        assert encoder_name in list(lm_name_dict.keys()) + list(llm_path_dict.keys())
+        
+        if encoder_name in lm_name_dict.keys():
+            lm_fullname = lm_name_dict[encoder_name]
+            self.tokenizer = AutoTokenizer.from_pretrained(lm_fullname)
+            self.model = AutoModel.from_pretrained(lm_fullname).to(device)
+            self.encoder_type = "LM"
+        else:
+            llm_path = llm_path_dict[encoder_name]
+
+            llm_tokenizer = AutoTokenizer.from_pretrained(llm_path)
+            llm_tokenizer.pad_token_id = 0
+            llm_tokenizer.padding_side = "right"
+            llm_tokenizer.truncation_side = "right"
+            self.tokenizer = llm_tokenizer
+            self.encoder_type = "LLM"
+
+            self.model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16).to(device)
+        
+        trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        print(f"[{encoder_name}] Number of parameters {trainable_params}")
+        
+    def forward(self, input_text, pooling="cls", max_length=512):
+        input_text = "Empty text" if len(input_text) == 0 else input_text
+        if self.encoder_type == "LM":
+            encoded_input = self.tokenizer(input_text, return_tensors='pt', padding=True, truncation=True, max_length=max_length).to(self.device)
+            output = self.model(**encoded_input)
+            if pooling == "cls":
+                text_emb = output.last_hidden_state[:, 0, :]
+            else:
+                text_emb = mean_pooling(output, encoded_input["attention_mask"])
+        elif self.encoder_type == "LLM":
+            encoded_input = self.tokenizer(input_text, add_special_tokens=False, return_tensors="pt", padding=True, truncation=True, max_length=max_length).to(self.device)
+            outputs = self.model(**encoded_input, output_hidden_states=True)
+            text_emb = mean_pooling_llm(outputs.hidden_states[-1], encoded_input["attention_mask"])
+        
+        return text_emb
 
 
 class BertClassifier(PreTrainedModel):
