@@ -25,7 +25,7 @@ def load_graph_dataset(dataset_name, device, emb_model="shallow"):
             node2vec_model = node2vec.fit(window=10, min_count=1, batch_words=4)
             print(node2vec_model.wv.vectors.shape, type(node2vec_model.wv.vectors))
             node_feat = torch.FloatTensor(node2vec_model.wv.vectors).to(device)
-            os.makedirs(f"../datasets/Node2Vec")
+            os.makedirs(f"../datasets/Node2Vec", exist_ok=True)
             torch.save(node_feat, f"../datasets/Node2Vec/{dataset_name}.pt")
         graph_data.x = node_feat
     
