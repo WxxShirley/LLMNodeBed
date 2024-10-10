@@ -142,8 +142,6 @@ def homophily_ratio(dataset):
             for a_neighbor in one_neighbor_list:
                 if graph_data.y[central_node] == graph_data.y[a_neighbor]:
                     same_category = same_category + 1
-            if dataset == "instagram":
-                same_category = same_category - 1
             row_average = float(same_category)/list_lenth
             all_average += row_average
     
