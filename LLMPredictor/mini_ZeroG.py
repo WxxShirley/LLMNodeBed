@@ -44,15 +44,10 @@ class MiniZeroG(nn.Module):
         if args.text_encoder in ["SentenceBert", "roberta", "e5-large", "MiniLM"]:
             self.tokenizer = AutoTokenizer.from_pretrained(encoder_fullname)
             self.text_model = AutoModel.from_pretrained(encoder_fullname).to(self.device)
-            if args.text_encoder in ['SentenceBert']:
-                self.target_modules = ["q_lin", "v_lin"]
-            elif args.text_encoder in ["roberta", "e5-large", "MiniLM"]:
-                self.target_modules = ["query", "value"]
         else:
             # Load local LLM
             self.tokenizer = AutoTokenizer.from_pretrained(encoder_fullname)
             self.text_model = AutoModelForCausalLM.from_pretrained(encoder_fullname, torch_dtype=torch.float16).to(self.device)
-            self.target_modules = ["q_proj", "v_proj"]
             self.tokenizer.pad_token = self.tokenizer.eos_token
         
         self.criteria = nn.CrossEntropyLoss()
