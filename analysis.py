@@ -14,10 +14,14 @@ def load_target_graph(dataset_name):
     edges = graph_data.edge_index.t().cpu().numpy().tolist()
 
     for (u, v) in edges:
-        neighbor_dict[u].append(v)
         neighbor_dict[v].append(u)
+        neighbor_dict[u].append(v)
      
-    # print(neighbor_dict[0])
+    for centric_node, neighbors in neighbor_dict.items():
+        # remove self-loop and possible duplicate neighbors
+        neighbors = list(set(neighbors) - {centric_node})
+        neighbor_dict[centric_node] = neighbors
+        
     return graph_data, neighbor_dict
 
 
@@ -75,13 +79,13 @@ if __name__ == "__main__":
         g_data, g_dict = load_target_graph(dataname)
         
         # Part I Homophily Analysis
-        # cora Homo Ratio 82.623
-        # pubmed Homo Ratio 79.242
-        # citeseer Homo Ratio 72.964
-        # instagram Homo Ratio 71.041
-        # wikics Homo Ratio 68.739
-        # reddit Homo Ratio 64.013
-        # arxiv Homo Ratio 63.585
+        # cora Homophily Ratio 82.516
+        # citeseer Homophily Ratio 72.931
+        # pubmed Homophily Ratio 79.241
+        # wikics Homophily Ratio 68.668
+        # instagram Homophily Ratio 65.353
+        # reddit Homophily Ratio 55.524
+        # arxiv Homophily Ratio 63.53
         cur_homophily = compute_homo_ratio(g_data, g_dict)
         print(f"{dataname} Homophily Ratio {cur_homophily}")
         

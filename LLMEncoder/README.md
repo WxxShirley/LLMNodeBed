@@ -40,9 +40,9 @@ python3 main.py --dataset=cora --encoder_name=e5-large --gnn_type=GCN --n_layers
 
 * For networks which exhibit **higher homogeneity** (i.e., Cora, Citeseer, and Pubmed), LM-generated embeddings are expressive enough to enhance downstream predictions compared to LLMs. 
 
-|               | Cora   | Citeseer | Pubmed | WikiCS | Reddit | Instagram | arXiv |
-| ------------- | ------ | -------- | ------ | ------ | ------ | --------- | ----- |
-| **Homophily** | 82.62% | 72.96%   | 79.24% | 68.74% | 64.01  | 71.04     | 63.58 |
+|               | Cora   | Citeseer | Pubmed | WikiCS | Reddit | Instagram | arXiv  |
+| ------------- | ------ | -------- | ------ | ------ | ------ | --------- | ------ |
+| **Homophily** | 82.52% | 72.93%   | 79.24% | 68.67% | 55.53% | 65.35%    | 63.53% |
 
 * LLMs are more powerful on **text-discriminative** datasets, like arXiv and WikiCS, which contains 40 and 10 categories, respectively, demanding more discriminative embeddings. 
 
