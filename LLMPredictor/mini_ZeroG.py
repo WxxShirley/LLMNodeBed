@@ -7,7 +7,7 @@ import json
 from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
 sys.path.append("../")
 from common import compute_acc_and_f1, mean_pooling, mean_pooling_llm, normalize_adj_matrix
-from common import load_graph_dataset
+from common import load_graph_dataset_for_zerog
 
 
 encoder_dict = {
@@ -16,7 +16,11 @@ encoder_dict = {
     "roberta": "sentence-transformers/all-roberta-large-v1", # 355M
     "e5-large": "intfloat/e5-large-v2", # 355M
 
-    # TODO: add Qwen2.5-3B, Llama3-8B, etc
+    "Qwen-3B": "/root/autodl-tmp/models/qwen/Qwen2___5-3B-Instruct", # 3B
+    "Mistral-7B": "/root/autodl-tmp/models/Mistral-7B/snapshots/Mistral-7B-Instruct-v0.2", # 7B
+    "Llama3-8B": "/root/autodl-tmp/models/LLM-Research/Meta-Llama-3-8B-Instruct", # 8B
+    "Vicuna-13B": "/root/autodl-tmp/models/Vicuna-13B/snapshots/Vicuna-13B-v1.5", # 13B
+    "Llama-13B": "/root/autodl-tmp/models/Llama2/Llama-2-13b-chat-hf" # 13B
 }
 
 
@@ -68,7 +72,7 @@ class MiniZeroG(nn.Module):
         
         return text_embeds
     
-    def zero_shot_eval(self, node_embeds, label_embeds, data, dataset_name):
+    def zero_shot_eval(self, node_embeds, label_embeds, data, R):
         if self.args.if_norm:
             # print(f"hit feature normalization")
             node_embeds = (node_embeds - node_embeds.mean(0)) / node_embeds.std(0)
@@ -77,18 +81,15 @@ class MiniZeroG(nn.Module):
         # TODO: add ablation study to check whether the introduced virtual node is useful
         num_exist_nodes = data.y.shape[0] + 1 
         virtual_node_idx = data.y.shape[0]
-        if dataset_name in ["citeseer"]:
-            new_edges_to_virtual = [[node_idx, virtual_node_idx] for node_idx in range(num_exist_nodes-1)]
-        elif dataset_name in ["cora", "pubmed", "wikics", "reddit", "instagram"]:
-            new_edges_to_virtual = []
-            for node_idx in range(num_exist_nodes-1):
-                new_edges_to_virtual.extend([[node_idx, virtual_node_idx], [virtual_node_idx, node_idx]])
+        new_edges_to_virtual = []
+        for node_idx in range(num_exist_nodes-1):
+            new_edges_to_virtual.extend([[node_idx, virtual_node_idx], [virtual_node_idx, node_idx]])
         
         new_edge_index = torch.cat([data.edge_index.t(), torch.tensor(new_edges_to_virtual, dtype=torch.long).to(self.device)], dim=0).t()
 
         adj_normed = normalize_adj_matrix(new_edge_index, num_exist_nodes, self.device)
 
-        for _ in range(self.args.test_R):
+        for _ in range(R):
             node_embeds = torch.mm(adj_normed, node_embeds)
         node_embeds = node_embeds[:-1, :]
         node_embeds /= node_embeds.norm(dim=-1, keepdim=True).to(self.device)
@@ -97,10 +98,11 @@ class MiniZeroG(nn.Module):
         dists = torch.einsum('bn,cn->bc', node_embeds, label_embeds)
         preds = torch.argmax(dists, dim=1)
 
-        acc, f1 = compute_acc_and_f1(preds[data.test_mask].cpu(), data.y[data.test_mask].cpu())
+        test_acc, test_f1 = compute_acc_and_f1(preds[data.test_mask].cpu(), data.y[data.test_mask].cpu())
+        eval_acc, eval_f1 = compute_acc_and_f1(preds[data.val_mask].cpu(), data.y[data.val_mask].cpu())
         del node_embeds, label_embeds, dists, preds
         
-        return [acc, f1]
+        return [test_acc, test_f1], [eval_acc, eval_f1]
 
 
 if __name__ == "__main__":
@@ -110,7 +112,7 @@ if __name__ == "__main__":
     parser.add_argument("--if_norm", action="store_true", default=True, help="Indicator of normalization")
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--text_encoder", type=str, default="SentenceBert", help="Type of text encoder")
-    parser.add_argument("--test_R", type=int, default=5)
+    parser.add_argument("--R_list", type=str, default="0,2,4,6,8,10")
 
     args = parser.parse_args()
     device = torch.device(args.device)
@@ -119,7 +121,7 @@ if __name__ == "__main__":
     test_names, test_graphs = args.test_datasets.split(","), []
 
     for dataset_name in test_names:
-        test_graph = load_graph_dataset(dataset_name, device)
+        test_graph = load_graph_dataset_for_zerog(dataset_name, device, prefix="..")
         test_graphs.append(test_graph)
 
     model = MiniZeroG(args)
@@ -130,6 +132,9 @@ if __name__ == "__main__":
         # Zero-shot Prediction 
         test_graph_name = test_names[idx]
         with torch.no_grad():
+            r_list = [int(r) for r in args.R_list.split(",")]
+            best_eval_acc, best_test_acc, best_test_f1, best_r = 0, 0, 0, r_list[0]
+            
             text_features = []
             for text in tqdm.tqdm(test_graph_data.raw_texts, desc=f"Processing {test_graph_name} node texts"):
                 cur_text_feature = model.text_forward(text).cpu()
@@ -145,17 +150,23 @@ if __name__ == "__main__":
                 label_features.append(cur_label_feature)
             label_embeds = torch.cat(label_features, dim=0).to(device)
             
-            res = model.zero_shot_eval(node_embeds, label_embeds, test_graph_data, test_graph_name)
+            for cur_r in r_list:
+                test_scores, eval_scores = model.zero_shot_eval(node_embeds, label_embeds, test_graph_data, cur_r)
+                if eval_scores[0] > best_eval_acc:
+                    best_eval_acc = eval_scores[0]
+                    best_test_acc, best_test_f1 = test_scores
+                    best_r = cur_r 
+            print(f"{test_graph_name} GridSearch Best Test Scores {best_test_acc:.2f} {best_test_f1:.2f} with R={best_r}")
         
-        score_dict[test_graph_name] = res 
-        res_list.append(res)
+        score_dict[test_graph_name] = [best_test_acc, best_test_f1]
+        res_list.append([best_test_acc, best_test_f1])
     print(f"Encoder {args.text_encoder}")
     print(f"Test Datasets {test_names}")
     print(f"Test Acc & F1 {res_list}")
 
     with open("../results/minizerog.txt", "a+") as file:
         score_dict["encoder"] = args.text_encoder
-        score_dict["test_R"] = args.test_R
+        score_dict["search_R"] = args.R_list
         # TODO: for ablation study, you have to specify more arguments
         file.write(json.dumps(score_dict) + "\n")
    

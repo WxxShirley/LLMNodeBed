@@ -3,7 +3,6 @@ import argparse
 import torch 
 from dataset import MyTextDataset
 from torch_geometric.data import DataLoader
-from torch_geometric.utils import to_undirected
 import time
 import sys 
 sys.path.append("../../")
@@ -72,8 +71,6 @@ if __name__ == "__main__":
 
     # Step 1 - Load all Test Graphs
     graph_data = load_graph_dataset_for_zerog(args.dataset, device)
-    if args.dataset in ["citeseer", "arxiv"]:
-        graph_data.edge_index = to_undirected(graph_data.edge_index)
     print(f"[STAGE 1] Loading {args.dataset}'s graph ...")
     
     # Step 2 - Load Wrapped (L)LM Encoder Model

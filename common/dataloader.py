@@ -2,6 +2,7 @@ import torch
 import os
 import json
 from collections import defaultdict
+from torch_geometric.utils import to_undirected
 
 
 def load_graph_dataset(dataset_name, device, emb_model="shallow"):
@@ -35,11 +36,14 @@ def load_graph_dataset(dataset_name, device, emb_model="shallow"):
     return graph_data
 
 
-def load_graph_dataset_for_zerog(dataset_name, device):
-    graph_data = torch.load(f"../../datasets/{dataset_name}.pt").to(device)
+def load_graph_dataset_for_zerog(dataset_name, device, prefix="../.."):
+    graph_data = torch.load(f"{prefix}/datasets/{dataset_name}.pt").to(device)
     
     if len(graph_data.train_mask) == 10:
         graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
+        
+    if dataset_name in ["citeseer", "arxiv"]:
+        graph_data.edge_index = to_undirected(graph_data.edge_index)
     
     graph_data.label_text = graph_data.label_name 
     return graph_data
