@@ -1,13 +1,11 @@
-import torch 
-import argparse
-import sys
-import tqdm
-import torch.nn as nn 
-import json
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
-sys.path.append("../")
-from common import compute_acc_and_f1, mean_pooling, mean_pooling_llm, normalize_adj_matrix
-from common import load_graph_dataset_for_zerog
+from peft import LoraModel, LoraConfig
+import sys 
+sys.path.append("../../")
+from common import normalize_adj_matrix, compute_acc_and_f1, mean_pooling, mean_pooling_llm
 
 
 encoder_dict = {
@@ -15,7 +13,7 @@ encoder_dict = {
     "SentenceBert": "sentence-transformers/multi-qa-distilbert-cos-v1", # 66M
     "roberta": "sentence-transformers/all-roberta-large-v1", # 355M
     "e5-large": "intfloat/e5-large-v2", # 355M
-
+    
     "Qwen-3B": "/root/autodl-tmp/models/qwen/Qwen2___5-3B-Instruct", # 3B
     "Mistral-7B": "/root/autodl-tmp/models/Mistral-7B/snapshots/Mistral-7B-Instruct-v0.2", # 7B
     "Llama3-8B": "/root/autodl-tmp/models/LLM-Research/Meta-Llama-3-8B-Instruct", # 8B
@@ -24,7 +22,6 @@ encoder_dict = {
 }
 
 
-# descriptions for introduced virtual nodes
 descriptions = {
     "cora": "The Cora dataset is a fundamental resource in the field of graph learning, particularly within the realm of machine learning research. It represents a network of scientific publications. There are 7 categories in Cora: Theory: This category covers theoretical aspects of machine learning and AI. Reinforcement Learning: This category includes research on reinforcement learning, a type of machine learning where an agent learns to make decisions to achieve a goal, focusing on algorithms, methodologies, and applications in decision-making areas. Genetic Algorithms: This category deals with genetic algorithms, a type of optimization algorithm inspired by natural evolution. Neural Networks: This category focuses on artificial neural networks, a subset of machine learning mimicking the human brain, covering various architectures, training techniques, and applications. Probabilistic Methods: This category pertains to research on probabilistic methods in machine learning, using probability mathematics to handle uncertainty and make predictions. Case Based: This category focuses on case-based reasoning in AI, a method that solves new problems by referring to similar past cases. Rule Learning: This category is about rule-based learning in machine learning, involving the generation of rules for decision-making systems, focusing on algorithms, transparency, and applications in fields requiring interpretability. The average degree of Cora is 4.",
     "citeseer": "The Citeseer dataset is a prominent academic resource in the field of computer science, categorizing publications into six distinct areas. These are Agents, focusing on intelligent agents; Machine Learning (ML), covering all aspects of learning techniques and applications; Information Retrieval (IR), dealing with data and text indexing and retrieval; Databases (DB), related to database management and data mining; Human-Computer Interaction (HCI), emphasizing computer technology interfaces for humans; and Artificial Intelligence (AI), a broad category encompassing general AI theory and applications, excluding certain subfields. The average degree of this graph is 2.",
@@ -36,49 +33,75 @@ descriptions = {
 }
 
 
-class MiniZeroG(nn.Module):
+class TextLoraModel(nn.Module):
     def __init__(self, args):
-        super(MiniZeroG, self).__init__()
+        super(TextLoraModel, self).__init__()
         self.args = args 
-        self.device = device
+        self.device = torch.device(args.device)
         
         assert args.text_encoder in encoder_dict.keys()
         encoder_fullname = encoder_dict[args.text_encoder]
-
+        
         if args.text_encoder in ["SentenceBert", "roberta", "e5-large", "MiniLM"]:
             self.tokenizer = AutoTokenizer.from_pretrained(encoder_fullname)
             self.text_model = AutoModel.from_pretrained(encoder_fullname).to(self.device)
+            if args.text_encoder in ['SentenceBert']:
+                self.target_modules = ["q_lin", "v_lin"]
+            elif args.text_encoder in ["roberta", "e5-large", "MiniLM"]:
+                self.target_modules = ["query", "value"]
         else:
-            # Load local LLM
             self.tokenizer = AutoTokenizer.from_pretrained(encoder_fullname)
             self.text_model = AutoModelForCausalLM.from_pretrained(encoder_fullname, torch_dtype=torch.float16).to(self.device)
+            self.target_modules = ["q_proj", "v_proj"]
             self.tokenizer.pad_token = self.tokenizer.eos_token
-        
+
+        self.config = LoraConfig(
+            # "CAUSAL_LM" for LLM
+            task_type="SEQ_CLS",
+            r=4,
+            lora_alpha=8,
+            target_modules=self.target_modules,
+            lora_dropout=0.1
+        )
+
+        self.lora_model = LoraModel(self.text_model, self.config, "default") if args.use_lora else self.text_model
         self.criteria = nn.CrossEntropyLoss()
 
     def text_forward(self, text):
-        text = "Empty text" if len(text) == 0 else text
+        text = "Empty Text" if len(text) == 0 else text
+        # print(len(text))
         tokens = self.tokenizer(text, max_length=256, return_tensors='pt', truncation=True, padding=True).to(self.device)
-        if self.args.text_encoder in ["SentenceBert", "roberta", "e5-large"]:
-            # Except for MiniLM, we use the CLS embedding
-            text_embeds = self.text_model(**tokens)[0][:, 0, :]
-        elif self.args.text_encoder == "MiniLM":
-            text_embeds = mean_pooling(self.text_model(**tokens), tokens["attention_mask"])
+        if self.args.text_encoder in ["SentenceBert", "roberta", "e5-large", "MiniLM"]:
+            text_embeds = self.lora_model(**tokens)[0][:, 0, :]
+        # elif self.args.text_encoder == "MiniLM":
+        #     text_embeds = mean_pooling(self.lora_model(**tokens), tokens["attention_mask"])
         else:
-            # For LLMs, we use the sentence-level mean pooling
-            outputs = self.text_model(**tokens, output_hidden_states=True)
+            outputs = self.lora_model(**tokens, output_hidden_states=True)
             text_embeds = mean_pooling_llm(outputs.hidden_states[-1], tokens["attention_mask"])
         del tokens
-        
+        torch.cuda.empty_cache()
         return text_embeds
+
+    def forward(self, batch_data, label_texts):
+        node_embeds = self.text_forward(batch_data["text"])
+        label_embeds = self.text_forward(label_texts)
+
+        if self.args.if_norm:
+            node_embeds = (node_embeds - node_embeds.mean(0)) / node_embeds.std(0)
+            label_embeds = (label_embeds - label_embeds.mean(0)) / label_embeds.std(0)
+        
+        logits = torch.mm(node_embeds, label_embeds.transpose(1, 0))
+        logits = torch.div(logits, 1)
+        cl_loss = self.criteria(logits, batch_data["label"].long())
+
+        return cl_loss
     
-    def zero_shot_eval(self, node_embeds, label_embeds, data, R):
+    def zero_shot_eval(self, node_embeds, label_embeds, data):
         if self.args.if_norm:
             # print(f"hit feature normalization")
             node_embeds = (node_embeds - node_embeds.mean(0)) / node_embeds.std(0)
             label_embeds = (label_embeds - label_embeds.mean(0)) / label_embeds.std(0)
         
-        # TODO: add ablation study to check whether the introduced virtual node is useful
         num_exist_nodes = data.y.shape[0] + 1 
         virtual_node_idx = data.y.shape[0]
         new_edges_to_virtual = []
@@ -89,10 +112,10 @@ class MiniZeroG(nn.Module):
 
         adj_normed = normalize_adj_matrix(new_edge_index, num_exist_nodes, self.device)
 
-        for _ in range(R):
+        for _ in range(self.args.test_R):
             node_embeds = torch.mm(adj_normed, node_embeds)
         node_embeds = node_embeds[:-1, :]
-        node_embeds /= node_embeds.norm(dim=-1, keepdim=True).to(self.device)
+        node_embeds /= node_embeds.norm(dim=-1, keepdim=True)
         label_embeds /= label_embeds.norm(dim=-1, keepdim=True)
 
         dists = torch.einsum('bn,cn->bc', node_embeds, label_embeds)
@@ -101,73 +124,5 @@ class MiniZeroG(nn.Module):
         test_acc, test_f1 = compute_acc_and_f1(preds[data.test_mask].cpu(), data.y[data.test_mask].cpu())
         eval_acc, eval_f1 = compute_acc_and_f1(preds[data.val_mask].cpu(), data.y[data.val_mask].cpu())
         del node_embeds, label_embeds, dists, preds
-        
+        torch.cuda.empty_cache()
         return [test_acc, test_f1], [eval_acc, eval_f1]
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--test_datasets", type=str, default="cora,citeseer,pubmed,wikics,instagram,reddit")
-    parser.add_argument("--if_norm", action="store_true", default=True, help="Indicator of normalization")
-    parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--text_encoder", type=str, default="SentenceBert", help="Type of text encoder")
-    parser.add_argument("--R_list", type=str, default="0,2,4,6,8,10")
-
-    args = parser.parse_args()
-    device = torch.device(args.device)
-    print("=" * 20)
-
-    test_names, test_graphs = args.test_datasets.split(","), []
-
-    for dataset_name in test_names:
-        test_graph = load_graph_dataset_for_zerog(dataset_name, device, prefix="..")
-        test_graphs.append(test_graph)
-
-    model = MiniZeroG(args)
-    model.eval()
-
-    res_list, score_dict = [], {}
-    for idx, test_graph_data in enumerate(test_graphs):
-        # Zero-shot Prediction 
-        test_graph_name = test_names[idx]
-        with torch.no_grad():
-            r_list = [int(r) for r in args.R_list.split(",")]
-            best_eval_acc, best_test_acc, best_test_f1, best_r = 0, 0, 0, r_list[0]
-            
-            text_features = []
-            for text in tqdm.tqdm(test_graph_data.raw_texts, desc=f"Processing {test_graph_name} node texts"):
-                cur_text_feature = model.text_forward(text).cpu()
-                text_features.append(cur_text_feature)
-            
-            desc = descriptions[test_graph_name]
-            text_features.append(model.text_forward(desc).cpu())
-            node_embeds = torch.cat(text_features, dim=0).to(device)
-
-            label_features = []
-            for text in tqdm.tqdm(test_graph_data.label_name, desc=f"Processing {test_graph_name} label texts"):
-                cur_label_feature = model.text_forward(text).cpu()
-                label_features.append(cur_label_feature)
-            label_embeds = torch.cat(label_features, dim=0).to(device)
-            
-            for cur_r in r_list:
-                test_scores, eval_scores = model.zero_shot_eval(node_embeds, label_embeds, test_graph_data, cur_r)
-                if eval_scores[0] > best_eval_acc:
-                    best_eval_acc = eval_scores[0]
-                    best_test_acc, best_test_f1 = test_scores
-                    best_r = cur_r 
-            print(f"{test_graph_name} GridSearch Best Test Scores {best_test_acc:.2f} {best_test_f1:.2f} with R={best_r}")
-        
-        score_dict[test_graph_name] = [best_test_acc, best_test_f1]
-        res_list.append([best_test_acc, best_test_f1])
-    print(f"Encoder {args.text_encoder}")
-    print(f"Test Datasets {test_names}")
-    print(f"Test Acc & F1 {res_list}")
-
-    with open("../results/minizerog.txt", "a+") as file:
-        score_dict["encoder"] = args.text_encoder
-        score_dict["search_R"] = args.R_list
-        # TODO: for ablation study, you have to specify more arguments
-        file.write(json.dumps(score_dict) + "\n")
-   
-    print("=" * 20)
