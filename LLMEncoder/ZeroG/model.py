@@ -82,36 +82,17 @@ class TextLoraModel(nn.Module):
         torch.cuda.empty_cache()
         return text_embeds
 
-    def forward(self, data):
-        virtual_node_desc = descriptions[data.dataset_name]
-        # print(data)
-        node_embeds = self.text_forward(data.raw_text + [virtual_node_desc])
-        label_embeds = self.text_forward(data.label_text)
+    def forward(self, batch_data, label_texts):
+        node_embeds = self.text_forward(batch_data["text"])
+        label_embeds = self.text_forward(label_texts)
 
         if self.args.if_norm:
             node_embeds = (node_embeds - node_embeds.mean(0)) / node_embeds.std(0)
             label_embeds = (label_embeds - label_embeds.mean(0)) / label_embeds.std(0)
         
-        # introduce virtual nodes
-        num_exist_nodes = data.y.shape[0] + 1 
-        virtual_node_idx = data.y.shape[0]
-        new_edges_to_virtual = []
-        for node_idx in range(num_exist_nodes-1):
-            new_edges_to_virtual.extend([[node_idx, virtual_node_idx], [virtual_node_idx, node_idx]])
-        
-        new_edge_index = torch.cat([data.edge_index.t(), torch.tensor(new_edges_to_virtual, dtype=torch.long).to(self.device)], dim=0).t()
-
-        adj_normed = normalize_adj_matrix(new_edge_index, num_exist_nodes, self.device)
-
-        for _ in range(self.args.R):
-            node_embeds = torch.mm(adj_normed, node_embeds)
-        new_node_embeds = node_embeds[:-1, :]
-        
-        del adj_normed, node_embeds
-
-        logits = torch.mm(new_node_embeds, label_embeds.transpose(1, 0))
+        logits = torch.mm(node_embeds, label_embeds.transpose(1, 0))
         logits = torch.div(logits, 1)
-        cl_loss = self.criteria(logits, data.y.long())
+        cl_loss = self.criteria(logits, batch_data["label"].long())
 
         return cl_loss
     
