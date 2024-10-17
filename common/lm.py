@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 from transformers import PreTrainedModel, AutoTokenizer, AutoModel, AutoModelForCausalLM
 from transformers.modeling_outputs import TokenClassifierOutput
+from tqdm import tqdm
 
 
 def mean_pooling(model_output, attention_mask):
@@ -33,6 +34,13 @@ llm_path_dict = {
 }
 
 
+layer_dict = {
+    "MiniLM": 6, "SentenceBert": 6,
+    "roberta": 24, "e5-large": 24,
+    "Qwen-3B": 36, "Mistral-7B": 32, "Llama3-8B": 32, "Vicuna-13B": 40, "Llama-13B": 40
+}
+
+
 class TextEncoder(nn.Module):
     def __init__(self, encoder_name, device):
         super(TextEncoder, self).__init__()
@@ -56,12 +64,33 @@ class TextEncoder(nn.Module):
             llm_tokenizer.truncation_side = "right"
             self.tokenizer = llm_tokenizer
             self.encoder_type = "LLM"
-
+            
             self.model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16).to(device)
+            self.model.config.pad_token_id = self.model.config.eos_token_id
         
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         print(f"[{encoder_name}] Number of parameters {trainable_params}")
+    
+    def engine_forward(self, all_text, max_length=512):
+        num_layers = layer_dict[self.encoder_name]
+        layers = [[] for _ in range(num_layers+1)]
         
+        for input_text in tqdm(all_text, desc="Preparing All Hidden States"):
+            input_text = "Empty text" if len(input_text) == 0 else input_text
+            encoded_input = self.tokenizer(input_text, return_tensors='pt', padding=True, truncation=True, max_length=max_length).to(self.device)
+            with torch.no_grad():
+                output = self.model(**encoded_input, output_hidden_states=True)
+            hidden_states = output["hidden_states"]
+            
+            for i, layer_hid in enumerate(hidden_states):
+                layer_hid = layer_hid.cpu()
+                # print(i, layer_hid.shape)
+                layer_node_hid = mean_pooling_llm(layer_hid, encoded_input["attention_mask"].cpu())
+                layers[i].append(layer_node_hid.cpu())
+        
+        layers_hid = [torch.cat(xs).float() for xs in layers]
+        return layers_hid
+            
     def forward(self, input_text, pooling="cls", max_length=512):
         input_text = "Empty text" if len(input_text) == 0 else input_text
         if self.encoder_type == "LM":
