@@ -5,7 +5,23 @@ from collections import defaultdict
 from torch_geometric.utils import to_undirected
 
 
-def load_graph_dataset(dataset_name, device, emb_model="shallow"):
+def re_split_data(num_node, train_percent=0.6, val_percent=0.2, device="cuda:0"):
+    import numpy as np
+    node_ids = np.arange(num_node)
+    np.random.shuffle(node_ids)
+    
+    train_ids = np.sort(node_ids[:int(num_node * train_percent)])
+    val_ids = np.sort(node_ids[int(num_node * train_percent): int(num_node * (train_percent + val_percent))])
+    test_ids = np.sort(node_ids[int(num_node * (train_percent + val_percent)): ])
+
+    train_mask = torch.BoolTensor(np.array([True if idx in train_ids else False for idx in node_ids]))
+    val_mask = torch.BoolTensor(np.array([True if idx in val_ids else False for idx in node_ids]))
+    test_mask = torch.BoolTensor(np.array([True if idx in test_ids else False for idx in node_ids])) 
+    
+    return train_mask.to(device), val_mask.to(device), test_mask.to(device)
+    
+
+def load_graph_dataset(dataset_name, device, emb_model="shallow", re_split=False):
     graph_data = torch.load(f"../datasets/{dataset_name}.pt").to(device)
     
     if emb_model != "shallow":
@@ -33,14 +49,20 @@ def load_graph_dataset(dataset_name, device, emb_model="shallow"):
     if len(graph_data.train_mask) == 10:
         graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
     
+    if re_split:
+        graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = re_split_data(graph_data.num_nodes, device=device)
+    
     return graph_data
 
 
-def load_graph_dataset_for_zerog(dataset_name, device, prefix="../.."):
+def load_graph_dataset_for_zerog(dataset_name, device, prefix="../..", re_split=False):
     graph_data = torch.load(f"{prefix}/datasets/{dataset_name}.pt").to(device)
     
     if len(graph_data.train_mask) == 10:
         graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
+    
+    if re_split:
+        graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = re_split_data(graph_data.num_nodes, device=device)
         
     if dataset_name in ["citeseer", "arxiv"]:
         graph_data.edge_index = to_undirected(graph_data.edge_index)
@@ -49,11 +71,14 @@ def load_graph_dataset_for_zerog(dataset_name, device, prefix="../.."):
     return graph_data
 
 
-def load_graph_dataset_for_tape(dataset_name, device, use_gpt=False, gpt_name="GPT-3.5-turbo"):
+def load_graph_dataset_for_tape(dataset_name, device, use_gpt=False, gpt_name="GPT-3.5-turbo", re_split=False):
     graph_data = torch.load(f"../../datasets/{dataset_name}.pt").to(device)
     
     if len(graph_data.train_mask) == 10:
         graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
+    
+    if re_split:
+        graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = re_split_data(graph_data.num_nodes, device=device)
     
     if use_gpt:
         prediction_file = f"../../results/LLMEncoder/TAPE/{gpt_name}/{dataset_name}.json" 
