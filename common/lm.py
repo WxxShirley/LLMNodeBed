@@ -35,9 +35,15 @@ llm_path_dict = {
 
 
 layer_dict = {
-    "MiniLM": 6, "SentenceBert": 6,
-    "roberta": 24, "e5-large": 24,
-    "Qwen-3B": 36, "Mistral-7B": 32, "Llama3-8B": 32, "Vicuna-13B": 40, "Llama-13B": 40
+    "MiniLM": 6,
+    "SentenceBert": 6,
+    "roberta": 24,
+    "e5-large": 24,
+    "Qwen-3B": 36,
+    "Mistral-7B": 32,
+    "Llama3-8B": 32,
+    "Vicuna-13B": 40,
+    "Llama-13B": 40
 }
 
 
@@ -89,6 +95,8 @@ class TextEncoder(nn.Module):
                 layers[i].append(layer_node_hid.cpu())
         
         layers_hid = [torch.cat(xs).float() for xs in layers]
+        # layers_shape = [obj.shape for obj in layers_hid]
+        # print(layers_shape)
         return layers_hid
             
     def forward(self, input_text, pooling="cls", max_length=512):

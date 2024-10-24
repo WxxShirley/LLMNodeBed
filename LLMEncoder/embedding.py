@@ -13,10 +13,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--dataset", type=str, default="cora", choices=['cora', "pubmed", "citeseer", "wikics", "arxiv", "instagram", "reddit"])
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--encoder_name", type=str, default="e5-large", choices=[
-        "e5-large", "SentenceBert", "MiniLM", "roberta",
-        "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"
-    ])
+    parser.add_argument("--encoder_name", type=str, default="SentenceBert", help="Name of encoder, e.g., SentenceBert, e5-large, Qwen-3B, Mistral-7B, etc.")
     parser.add_argument("--use_cls", type=int, default=1)
     parser.add_argument("--save_emb", type=int, default=1)
     
