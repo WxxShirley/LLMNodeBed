@@ -8,6 +8,9 @@ from common import load_graph_dataset, GNNEncoder, array_mean_std, compute_acc_a
 import torch.nn.functional as F
 
 
+DEFAULT_LM, DEFAULT_LLM = "SentenceBert", "Qwen-3B"
+
+
 def gnn_train():
     gnn_model.train()
     optimizer.zero_grad()
@@ -38,7 +41,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--dataset", type=str, default="cora")
     # Encoder
-    parser.add_argument("--encoder_name", type=str, default="", choices=["", "shallow", "e5-large", "SentenceBert", "MiniLM", "roberta", "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"])
+    #  - Note that we set default "LM" as SentenceBert, and default "LLM" as Qwen-3B
+    parser.add_argument("--encoder_name", type=str, default="", choices=["", "shallow", "LM", "LLM", "e5-large", "SentenceBert", "MiniLM", "roberta", "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"])
     
     # GNN configuration
     parser.add_argument("--gnn_type", type=str, default="GCN", choices=["GCN", "GAT", "SAGE", "TransformerConv"])
@@ -48,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("--use_softmax", type=int, default=0)
     parser.add_argument("--residual_conn", type=int, default=0)
     parser.add_argument("--jump_knowledge", type=int, default=0)
-    parser.add_argument("--batch_norm", type=int, default=0)
+    parser.add_argument("--batch_norm", type=int, default=0) # 0 for [cora, citeseer, pubmed], 1 for remaining datasets
 
     # Learning configuration
     parser.add_argument("--learning_rate", type=float, default=1e-2)
@@ -59,6 +63,9 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--run_times", type=int, default=5)
     parser.add_argument("--print_freq", type=int, default=50)
+    
+    # Train setting 
+    parser.add_argument("--re_split", type=int, default=0)
 
     parser.add_argument("--write_result", type=int, default=0)
 
@@ -66,7 +73,14 @@ if __name__ == "__main__":
     print(args)
 
     device = torch.device(args.device)
-    graph_data = load_graph_dataset(args.dataset, device, args.encoder_name if len(args.encoder_name) else "shallow")
+    if args.encoder_name == "LM":
+        args.encoder_name = DEFAULT_LM 
+    elif args.encoder_name == "LLM":
+        args.encoder_name = DEFAULT_LLM
+    graph_data = load_graph_dataset(args.dataset, 
+                                    device, 
+                                    args.encoder_name if len(args.encoder_name) else "shallow", 
+                                    re_split=args.re_split)
     print(graph_data.x.shape)
 
     final_acc_list, final_f1_list, timer_list = [], [], []
@@ -100,8 +114,7 @@ if __name__ == "__main__":
 
         for epoch in range(1, args.epochs+1):
             cur_loss = gnn_train()
-            train_acc, val_acc, test_acc = gnn_test()[0]
-            train_f1, val_f1, test_f1 = gnn_test()[1]
+            [train_acc, val_acc, test_acc], [train_f1, val_f1, test_f1] = gnn_test()
             
             if val_acc > best_eval_acc:
                 best_eval_acc = val_acc
@@ -114,7 +127,7 @@ if __name__ == "__main__":
                 best_test_f1 = test_f1
             
             if epoch % args.print_freq == 0:
-                print(f"Epoch {epoch:03d}   Train acc {train_acc:.3f} Val acc {val_acc:.3f} Test acc {test_acc:.3f}  Train F1 {train_f1:.3f} Val F1 {val_f1:.3f} Test F1 {test_f1:.4f}")
+                print(f"Epoch {epoch:03d}   Train acc {train_acc:.3f} Val acc {val_acc:.3f} Test acc {test_acc:.3f}  Train F1 {train_f1:.3f} Val F1 {val_f1:.3f} Test F1 {test_f1:.3f}")
             
             # Early stopping
             if counter >= args.patience:

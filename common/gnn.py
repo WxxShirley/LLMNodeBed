@@ -32,7 +32,8 @@ class GNNEncoder(nn.Module):
         self.hidden_dim = hidden_dim 
         self.output_dim = output_dim
         self.dropout = dropout
-        self.act = F.relu
+        # self.act = F.relu
+        self.act = F.leaky_relu
         self.use_softmax = use_softmax
         self.batch_norm = batch_norm
         self.residual_conn = residual_conn
