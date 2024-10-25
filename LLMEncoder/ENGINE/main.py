@@ -4,10 +4,13 @@ import argparse
 import os 
 import sys
 sys.path.append("../..")
-from common import get_cur_time, load_graph_dataset_for_tape, GNNEncoder, compute_acc_and_f1, array_mean_std
+from common import load_graph_dataset_for_tape, GNNEncoder, compute_acc_and_f1, array_mean_std
 import sampling
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import global_mean_pool
+import json
+import time
+import numpy as np
 
 
 def prepare_dataloader(g_data): 
@@ -15,7 +18,7 @@ def prepare_dataloader(g_data):
     train_idx = g_data.train_mask.nonzero().squeeze()
     val_idx = g_data.val_mask.nonzero().squeeze()
     test_idx = g_data.test_mask.nonzero().squeeze()
-    kwargs = {'batch_size': 256, 'num_workers': 4, 'persistent_workers': True}
+    kwargs = {'batch_size': args.batch_size, 'num_workers': 4, 'persistent_workers': True}
     
     if args.sampler == "random_walk" and args.dataset != "arxiv":
         train_graphs = sampling.collect_subgraphs(train_idx, g_data, walk_steps=args.walk_steps, restart_ratio=args.restart)
@@ -29,9 +32,9 @@ def prepare_dataloader(g_data):
             val_graphs = torch.load(f"{save_folder}/{args.dataset}_val.pt")
             test_graphs = torch.load(f"{save_folder}/{args.dataset}_test.pt")
         else:
-            train_graphs = sampling.ego_graphs_sampler(train_idx, g_data, hop=1)
-            val_graphs = sampling.ego_graphs_sampler(val_idx, g_data, hop=1)
-            test_graphs = sampling.ego_graphs_sampler(test_idx, g_data, hop=1)
+            train_graphs = sampling.ego_graphs_sampler(train_idx, g_data, hop=args.k)
+            val_graphs = sampling.ego_graphs_sampler(val_idx, g_data, hop=args.k)
+            test_graphs = sampling.ego_graphs_sampler(test_idx, g_data, hop=args.k)
     
     train_loader = DataLoader(train_graphs, shuffle=True, **kwargs)
     val_loader = DataLoader(val_graphs, **kwargs)
@@ -128,64 +131,60 @@ if __name__ == "__main__":
         "e5-large", "SentenceBert", "MiniLM", "roberta",
         "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"
     ])
-    
+    parser.add_argument("--re_split", type=int, default=0)
+    parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--run_times", type=int, default=3)
+    parser.add_argument("--write_result", type=int, default=1)
     
     parser.add_argument("--r", type=int, default=32)
     parser.add_argument("--hidden", type=int, default=64)
-    parser.add_argument("--layer_select", type=list, default=[0,5,10,15,20,25,-1])
     parser.add_argument("--gnn_type", type=str, default="GCN")
-    parser.add_argument("--n_layers", type=int, default=2)
+    parser.add_argument("--n_layers", type=int, default=1)
     parser.add_argument("--gnn_dropout", type=float, default=0.5)
     parser.add_argument("--T", type=float, default=0.1)
+    parser.add_argument("--batch_norm", type=int, default=0)
     
     # Sampling 
     parser.add_argument('--restart', type=float, help="the restart ratio of random walking", default=0.5)
     parser.add_argument('--walk_steps', type=int, help="the steps of random walking", default=64)
     parser.add_argument('--k', type=int, help="the hop of neighboors", default=1)
-    parser.add_argument("--sampler", type=str, default="random_walk")
+    parser.add_argument("--sampler", type=str, default="random_walk", choices=["random_walk", "khop"])
     
     # Model Training 
-    parser.add_argument("--lr", type=float, default=0.001)
-    parser.add_argument("--weight_decay", type=float, default=0.0005)
-    parser.add_argument("--epoch", type=int, default=500)
-    parser.add_argument("--patience", type=int, default=50)
+    parser.add_argument("--lr", type=float, default=0.0005)
+    parser.add_argument("--weight_decay", type=float, default=0.0001)
+    parser.add_argument("--epoch", type=int, default=200)
+    parser.add_argument("--patience", type=int, default=30)
     
     args = parser.parse_args()
     device = torch.device(args.device)
     
-    layers_dict = {
-        "MiniLM": [0, 3, 6], "SentenceBert": [0, 3, 6],
-        "roberta": [0, 6, 12, 18, 24], "e5-large": [0, 6, 12, 18, 24],
-        "Qwen-3B": [0, 9, 18, 27, 36], "Mistral-7B": [0, 8, 16, 24, 32], "Llama3-8B": [0, 8, 16, 24, 32],
-        "Vicuna-13B": [0, 8, 16, 24, 32, 40], "Llama-13B": [0, 8, 16, 24, 32, 40]
-    }
     r_dict = {
-        "MiniLM": 1, "SentenceBert": 1, 
-        "roberta": 8, "e5-large": 8, 
-        "Qwen-3B": 16, "Mistral-7B": 16, "Llama3-8B": 16, 
-        "Vicuna-13B": 32, "Llama-13B": 32
+        "MiniLM": 1, "SentenceBert": 2, 
+        "roberta": 4, "e5-large": 4, 
+        "Qwen-3B": 8, "Mistral-7B": 16, "Llama3-8B": 16, 
+        "Vicuna-13B": 16, "Llama-13B": 16
     }
     args.r = r_dict[args.encoder]
     
-    layer_select = layers_dict[args.encoder]
- 
     cache_file_path = f"../../datasets/{args.encoder}/{args.dataset}_cache_emb.pt"
     if not os.path.exists(cache_file_path):
         raise FileNotFoundError(f"No cache file found! Please use `python cache.py --dataset DATASET --encoder_name ENCODER` to generate it.")
     hidden_states = torch.load(cache_file_path)
     hidden_states = [x for x in hidden_states]
-    
-    graph_data, num_classes, texts = load_graph_dataset_for_tape(args.dataset, device=device, use_gpt=False, re_split=True)
+    layer_select = list(range(len(hidden_states)))
+ 
+    graph_data, num_classes, texts = load_graph_dataset_for_tape(args.dataset, device=device, use_gpt=False, re_split=args.re_split)
 
     train_loader, val_loader, test_loader = prepare_dataloader(graph_data)
     
     input_dim, r, hidden = hidden_states[0].shape[1], args.r, args.hidden 
     reduced_input_dim = int(input_dim / r) # k in EGINE's original paper
     
-    final_acc_list, final_f1_list = [], []
+    final_acc_list, final_f1_list, cost_times = [], [], []
     
     for seed in range(args.run_times): 
+        start_time = time.time()
         prog_list = [torch.nn.Sequential(
             torch.nn.Linear(input_dim, reduced_input_dim), 
             torch.nn.LayerNorm(reduced_input_dim), 
@@ -198,7 +197,8 @@ if __name__ == "__main__":
             output_dim=reduced_input_dim, 
             n_layers=args.n_layers,
             gnn_type=args.gnn_type, 
-            dropout=args.gnn_dropout).to(device) for l in layer_select]
+            dropout=args.gnn_dropout, 
+            batch_norm=args.batch_norm).to(device) for l in layer_select]
         
         alpha_list = [torch.nn.Parameter(torch.tensor(0.0), requires_grad=True) for l in layer_select]
 
@@ -210,7 +210,6 @@ if __name__ == "__main__":
             params.append({'params': model_list[i].parameters(), 'lr': lr, 'weight_decay': weight_decay})
             params.append({'params': prog_list[i].parameters(), 'lr': lr, 'weight_decay': weight_decay}) 
             params.append({'params': alpha_list[i], 'lr': lr, 'weight_decay': weight_decay})
-            # params.append({'params': exit_list[i].parameters(), 'lr': lr, 'weight_decay': weight_decay})
             xs_list.append(hidden_states[l])
         params.append({'params': classifier.parameters(), 'lr': lr, 'weight_decay': weight_decay})
         
@@ -220,7 +219,21 @@ if __name__ == "__main__":
         print(f"Timer {seed+1} {args.encoder}-{args.dataset} Best Acc {acc:.3f} Best F1 {f1:.3f}")
         final_acc_list.append(acc)
         final_f1_list.append(f1)
+        cost_times.append(time.time() - start_time)
         
     acc_mean, acc_std = array_mean_std(final_acc_list)
     f1_mean, f1_std = array_mean_std(final_f1_list)
     print(f"\n[Final] Acc {acc_mean}±{acc_std}  F1 {f1_mean}±{f1_std}")
+    
+    result_dict = {
+        "encoder": args.encoder, "dataset": args.dataset, 
+        "test-acc": f"{acc_mean:.2f}+-{acc_std:.2f}", "test-f1": f"{f1_mean:.2f}+-{f1_std:.2f}",
+        "time": f"{np.round(np.mean(np.array(cost_times)), 2)}s",
+        "gnn-config": f"gnn_type {args.gnn_type}; #layer {args.n_layers}; hidden {args.hidden}; reduced_input {reduced_input_dim}; sampler {args.sampler}",
+        "train-config": f"lr {args.lr}"
+    }
+    if args.write_result:
+        os.makedirs("../results/LLMEncoder/ENGINE", exist_ok=True)
+        with open("../results/LLMEncoder/ENGINEr/result.txt", "a+") as file:
+            file.write(json.dumps(result_dict) + "\n")
+        
