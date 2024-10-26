@@ -115,7 +115,7 @@ def write_correctness(file_path):
 
 
 def evaluate(file_path, model_name, dataset):
-    #write_correctness(file_path)
+    write_correctness(file_path)
     true_labels, predict_labels = [], []
     total_num = 0
     hallucination = 0
@@ -127,7 +127,7 @@ def evaluate(file_path, model_name, dataset):
                 continue
             
             total_num += 1
-
+            print(row)
             if row[3] == "correct":
                 true_labels.append(row[2])
                 predict_labels.append(row[2])
@@ -171,12 +171,10 @@ def evaluate(file_path, model_name, dataset):
                 predict_labels.append(row[1])
                 true_labels.append(row[2])
 
-    hullucination_rate = hallucination/total_num
+    hallucination_rate = hallucination/total_num
     accuracy, f1 = compute_acc_and_f1(predict_labels, true_labels)
-    print(f'Accuracy: {accuracy:.3f}, F1 Score: {f1:.3f}, Hullucination Rate: {hullucination_rate:.3f}')
+    print(f'Accuracy: {accuracy:.3f}, F1 Score: {f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}')
 
     with open(file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([f'Accuracy: {accuracy:.3f}', f'F1 Score: {f1:.3f}', f'Hullucination Rate: {hullucination_rate:.3f}'])
-
-
+        writer.writerow([f'Accuracy: {accuracy:.3f}', f'F1 Score: {f1:.3f}', f'Hallucination Rate: {hallucination_rate:.3f}'])
