@@ -6,7 +6,7 @@ from copy import deepcopy
 sys.path.append("../..")
 import torch.nn.functional as F
 from common import GNNEncoder, compute_acc_and_f1
-from common import load_graph_dataset_for_tape
+from common import load_graph_dataset_for_tape, set_seed
 
 
 class GNNTrainer():
@@ -25,16 +25,18 @@ class GNNTrainer():
         self.patience = cfg.gnn.train.early_stop
 
         # Load data
-        data, num_classes, _ = load_graph_dataset_for_tape(cfg.dataset, self.device)
+        set_seed(self.seed)
+        data, num_classes, _ = load_graph_dataset_for_tape(cfg.dataset, self.device, re_split=cfg.re_split)
 
         self.num_nodes = data.y.shape[0]
         self.num_classes = num_classes
         data.y = data.y.squeeze()
-
+         
+        re_split_prefix, seed_suffix = '_s_' if cfg.re_split else '', f'-seed{self.seed}'
         # Init gnn feature
         if self.feature_type == 'TA':
             print("Loading pretrained LM features (title and abstract) ...")
-            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}/{cfg.lm.model.short_name}.emb"
+            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}{re_split_prefix}/{cfg.lm.model.short_name}{seed_suffix}.emb"
             print(f"LM_emb_path: {LM_emb_path}")
             features = torch.from_numpy(np.array(
                 np.memmap(LM_emb_path, mode='r',
@@ -43,7 +45,7 @@ class GNNTrainer():
             ).to(torch.float32)
         elif self.feature_type == 'E':
             print("Loading pretrained LM features (explanations) ...")
-            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}{cfg.lm.train.llm_name}/{cfg.lm.model.short_name}.emb"
+            LM_emb_path = f"../../results/LLMEncoder/TAPE/{self.dataset_name}{re_split_prefix}{cfg.lm.train.llm_name}/{cfg.lm.model.short_name}{seed_suffix}.emb"
             print(f"LM_emb_path: {LM_emb_path}")
             features = torch.from_numpy(np.array(
                 np.memmap(LM_emb_path, mode='r',
@@ -66,6 +68,8 @@ class GNNTrainer():
                                 n_layers=self.num_layers,
                                 gnn_type=self.gnn_model_name,
                                 dropout=self.dropout,
+                                # for pubmed, batch_norm=0
+                                batch_norm=0
                                 ).to(self.device)
         
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -156,8 +160,9 @@ class EnsembleTrainer():
         self.epochs = cfg.gnn.train.epochs
         self.weight_decay = cfg.gnn.train.weight_decay
 
-        # ! Load data
-        data, _, _ = load_graph_dataset_for_tape(self.dataset_name, self.device)
+        # ! Load data 
+        set_seed(cfg.seed)
+        data, _, _ = load_graph_dataset_for_tape(self.dataset_name, self.device, re_split=cfg.re_split)
 
         data.y = data.y.squeeze()
         self.data = data.to(self.device)
