@@ -4,7 +4,7 @@ import torch
 import os
 import sys
 sys.path.append("../")
-from common import load_graph_dataset, GNNEncoder, array_mean_std, compute_acc_and_f1
+from common import load_graph_dataset, GNNEncoder, array_mean_std, compute_acc_and_f1, set_seed
 import torch.nn.functional as F
 
 
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # Train setting 
     parser.add_argument("--re_split", type=int, default=0)
 
-    parser.add_argument("--write_result", type=int, default=0)
+    parser.add_argument("--write_result", type=int, default=1)
 
     args = parser.parse_args()
     print(args)
@@ -77,19 +77,20 @@ if __name__ == "__main__":
         args.encoder_name = DEFAULT_LM 
     elif args.encoder_name == "LLM":
         args.encoder_name = DEFAULT_LLM
-    graph_data = load_graph_dataset(args.dataset, 
-                                    device, 
-                                    args.encoder_name if len(args.encoder_name) else "shallow", 
-                                    re_split=args.re_split)
-    print(graph_data.x.shape)
 
     final_acc_list, final_f1_list, timer_list = [], [], []
 
     if args.write_result:
         os.makedirs("../results/LLMEncoder", exist_ok=True)
-        write_file = open(f"../results/LLMEncoder/{args.dataset}.csv", mode='a', newline='')
+        write_file = open(f"../results/LLMEncoder/{args.dataset}{'' if not args.re_split else '_s'}.csv", mode='a', newline='')
         
-    for i in range(1, args.run_times+1):
+    for i in range(args.run_times):
+        set_seed(i) 
+        graph_data = load_graph_dataset(args.dataset, 
+                                        device, 
+                                        args.encoder_name if len(args.encoder_name) else "shallow", 
+                                        re_split=args.re_split)
+        # print(graph_data.x.shape, graph_data.edge_index.shape)
         gnn_model = GNNEncoder(
             input_dim=graph_data.x.shape[1],
             hidden_dim=args.hidden_dim, 
@@ -102,7 +103,7 @@ if __name__ == "__main__":
             residual_conn=args.residual_conn,
             jump_knowledge=args.jump_knowledge
         ).to(device)
-        if i == 1:
+        if i == 0:
             trainable_params = sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)
             print(f"[GNN] Number of parameters {trainable_params}")
 
@@ -134,7 +135,7 @@ if __name__ == "__main__":
                 break
         
         timer_list.append(round(time.time() - st_time, 3))
-        print(f'[Times {i}] Test Acc {best_test_acc:.2f}  Test F1 {best_test_f1:.2f} Time {timer_list[-1]:.3f}s\n')
+        print(f'[Times {i+1}] Test Acc {best_test_acc:.2f}  Test F1 {best_test_f1:.2f} Time {timer_list[-1]:.3f}s\n')
         final_acc_list.append(best_test_acc)
         final_f1_list.append(best_test_f1)
     
