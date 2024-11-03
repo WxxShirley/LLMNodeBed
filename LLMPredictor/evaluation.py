@@ -1,16 +1,8 @@
-from openai import OpenAI
-import os
-import argparse
-import torch
 import csv
 import sys
-from http import HTTPStatus
-from dashscope import Generation
-import re
 
 
 sys.path.append("../")
-from common import LLM_NEIGHBOR_PROMPTS as PROMPT_DICT
 from common import load_graph_dataset, compute_acc_and_f1
 
 labels = {
@@ -102,7 +94,7 @@ def check_correct(dataset, row):
 
 
 
-def write_correctness(file_path):
+def write_correctness(file_path,dataset):
 
     with open(file_path, mode='r', newline='') as file:
         reader = csv.reader(file)
@@ -111,7 +103,7 @@ def write_correctness(file_path):
     for row in rows:
         if row[0][0]< '0' or row[0][0] > '9':
             continue
-        check_result = check_correct(args.dataset, row)
+        check_result = check_correct(dataset, row)
         row.append(check_result)
         #row[3] = check_result
 
@@ -126,7 +118,7 @@ def write_correctness(file_path):
 
 
 def evaluate(file_path, model_name, dataset):
-    write_correctness(file_path)
+    write_correctness(file_path, dataset)
     true_labels, predict_labels = [], []
     total_num = 0
     hallucination = 0

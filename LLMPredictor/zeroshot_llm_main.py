@@ -1,17 +1,8 @@
-from openai import OpenAI
 import os
 import argparse
 import torch
 import csv
 import sys
-import time
-from http import HTTPStatus
-import dashscope
-from dashscope import Generation
-import networkx as nx
-from torch_geometric.utils.convert import to_networkx
-from sklearn.neighbors import kneighbors_graph
-from kneighbor import kneighbor_index, extract_common_values, k_1_neighbor_intersection
 from get_prediction import prediction
 from evaluation import evaluate
 
@@ -23,11 +14,11 @@ from common import load_graph_dataset, compute_acc_and_f1
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="instagram")
-    # chatglm3-6b   deepseek-chat   qwen-turbo
-    parser.add_argument("--model_name", type=str, default="chatglm3-6b")
+    parser.add_argument("--dataset", type=str, default="cora")
+    # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o-mini
+    parser.add_argument("--model_name", type=str, default="gpt-4o-mini")
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--prediction_type", type=str, default="lm")
+    parser.add_argument("--prediction_type", type=str, default="none")
 
     args = parser.parse_args()
 

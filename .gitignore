@@ -19,3 +19,5 @@ __pycache__
 /__pycache__
 /.vscode
 .vscode
+/common/apikey.py
+/LLMPredictor/test.py
