@@ -5,6 +5,7 @@ import sys
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 import csv
+from torch_geometric.utils import to_undirected
 
 sys.path.append("../")
 from common import RAW_NEIGHBOR_PROMPTS as PROMPT_DICT
@@ -33,6 +34,9 @@ def oneneighbor_index(dataset):
     
     data = load_graph_dataset (dataset_name = dataset, device="cpu")
 
+    if dataset in ["citeseer", "arxiv"]:
+        data.edge_index = to_undirected(data.edge_index)
+
     G = to_networkx(data)
     num_node = data.x.shape[0]
     one_neighbors = {index: [] for index in range(0, num_node)}
@@ -41,13 +45,8 @@ def oneneighbor_index(dataset):
 
     for index in range(0, num_node):
         neighbor_list = list(nx.neighbors(G, index))
-        if dataset == "instagram":
-            one_neighbors[index] = neighbor_list[1:]
         one_neighbors[index] = neighbor_list
-    #     max_length[0] = index if len(one_neighbors[index])>max_length[1] else max_length[0]
-    #     max_length[1] = len(one_neighbors[index]) if len(one_neighbors[index])>max_length[1] else max_length[1]
-    
-    # print (max_length)
+        one_neighbors[index] = [item for item in one_neighbors[index] if str(item) != str(index)]
 
     return one_neighbors
 
@@ -88,7 +87,7 @@ def save_index(dataset):
         
 
 if __name__ == '__main__':
-    dataset = "citeseer"
+    dataset = "pubmed"
     # common_neighbors = k_1_neighbor_intersection (dataset)
     # print("\n1")
     # k_neighbors = kneighbor_index(dataset)

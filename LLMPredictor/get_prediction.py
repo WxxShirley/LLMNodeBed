@@ -38,15 +38,20 @@ class prediction:
 
         node_discription = self.graph_data.raw_texts[self.index]
 
-        G = to_networkx(self.graph_data)
-        neighbor_list = list(nx.neighbors(G, self.index))
-        if self.dataset == "instagram":
-            neighbor_list = neighbor_list[1:]
-        neighbor_list = neighbor_list[:5] if len(neighbor_list) > 5 else neighbor_list
-        neighbor_info_list = []
-        for iter in neighbor_list:
-            neighbor_info_list.append(self.graph_data.raw_texts[iter])
-        neighbor_info = "\none of its neighbors' feature:".join(neighbor_info_list)
+        # get 1-ego neighbor info
+        one_neighbor_list = []
+        one_neighbor_file_path = f"../datasets/1-neighbors/{self.dataset}.csv"
+
+        with open(one_neighbor_file_path, 'r') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                if int(row[0]) == self.index:
+                    one_neighbor_list = ast.literal_eval(row[1])
+
+        one_neighbor_info_list = []
+        for iter in one_neighbor_list:
+            one_neighbor_info_list.append(self.graph_data.raw_texts[iter])
+        neighbor_info = "\none of its neighbors' feature:".join(one_neighbor_info_list)
 
         if self.prediction_type == "none":
             question = ZEROSHOT_PROMPTS[self.dataset]
@@ -57,21 +62,16 @@ class prediction:
             prompt_content = f"{node_discription}\n{neighbor_info}\n{question}"
 
         elif self.prediction_type == "lm":
-            # k_1_neighbor_list = k_1_neighbor_intersection(self.dataset)[self.index]
-            # if len(k_1_neighbor_list) == 0:
-            #     k_1_neighbor_list = list(nx.neighbors(G, self.index))
-            # k_1_neighbor_info_list = []
             k_1_neighbor_list = []
             k_1_neighbor_file_path = f"../datasets/k-1-neighbors/{self.dataset}.csv"
 
             with open(k_1_neighbor_file_path, 'r') as file:
                 reader = csv.reader(file)
                 for row in reader:
-
                     if int(row[0]) == self.index:
                         k_1_neighbor_list = ast.literal_eval(row[1])
             if len(k_1_neighbor_list) == 0:
-                k_1_neighbor_list = list(nx.neighbors(G, self.index))[:5]
+                k_1_neighbor_list = one_neighbor_list[:5]
 
             k_1_neighbor_info_list = []
             for iter in k_1_neighbor_list:
