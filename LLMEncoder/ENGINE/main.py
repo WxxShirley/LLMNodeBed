@@ -4,7 +4,7 @@ import argparse
 import os 
 import sys
 sys.path.append("../..")
-from common import load_graph_dataset_for_tape, GNNEncoder, compute_acc_and_f1, array_mean_std
+from common import get_cur_time, load_graph_dataset_for_tape, GNNEncoder, compute_acc_and_f1, array_mean_std, set_seed
 import sampling
 from torch_geometric.loader import DataLoader
 from torch_geometric.nn import global_mean_pool
@@ -127,10 +127,7 @@ if __name__ == "__main__":
     
     parser.add_argument("--dataset", type=str, default="cora", choices=['cora', "pubmed", "citeseer", "wikics", "arxiv", "instagram", "reddit"])
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--encoder", type=str, default="MiniLM", choices=[
-        "e5-large", "SentenceBert", "MiniLM", "roberta",
-        "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"
-    ])
+    parser.add_argument("--encoder", type=str, default="MiniLM", choices=["e5-large", "SentenceBert", "MiniLM", "roberta", "Qwen-3B", "Mistral-7B", "Vicuna-13B", "Llama3-8B", "Llama-13B"])
     parser.add_argument("--re_split", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--run_times", type=int, default=3)
@@ -158,6 +155,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
     device = torch.device(args.device)
+    print(args)
     
     r_dict = {
         "MiniLM": 1, "SentenceBert": 2, 
@@ -174,16 +172,16 @@ if __name__ == "__main__":
     hidden_states = [x for x in hidden_states]
     layer_select = list(range(len(hidden_states)))
  
-    graph_data, num_classes, texts = load_graph_dataset_for_tape(args.dataset, device=device, use_gpt=False, re_split=args.re_split)
-
-    train_loader, val_loader, test_loader = prepare_dataloader(graph_data)
-    
     input_dim, r, hidden = hidden_states[0].shape[1], args.r, args.hidden 
     reduced_input_dim = int(input_dim / r) # k in EGINE's original paper
     
     final_acc_list, final_f1_list, cost_times = [], [], []
     
     for seed in range(args.run_times): 
+        set_seed(seed) 
+        graph_data, num_classes, texts = load_graph_dataset_for_tape(args.dataset, device=device, use_gpt=False, re_split=args.re_split)
+        train_loader, val_loader, test_loader = prepare_dataloader(graph_data)
+    
         start_time = time.time()
         prog_list = [torch.nn.Sequential(
             torch.nn.Linear(input_dim, reduced_input_dim), 
@@ -233,7 +231,8 @@ if __name__ == "__main__":
         "train-config": f"lr {args.lr}"
     }
     if args.write_result:
-        os.makedirs("../results/LLMEncoder/ENGINE", exist_ok=True)
-        with open("../results/LLMEncoder/ENGINEr/result.txt", "a+") as file:
+        os.makedirs("../../results/LLMEncoder/ENGINE", exist_ok=True)
+        with open("../../results/LLMEncoder/ENGINE/result.txt", "a+") as file:
             file.write(json.dumps(result_dict) + "\n")
+    print("\n\n")
         

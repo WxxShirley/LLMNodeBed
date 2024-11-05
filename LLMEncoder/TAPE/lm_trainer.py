@@ -5,7 +5,7 @@ from transformers import AutoTokenizer, AutoModel, TrainingArguments, Trainer, I
 import sys
 sys.path.append("../..")
 from common import BertClassifier, BertClaInfModel
-from common import load_graph_dataset_for_tape, compute_acc_and_f1
+from common import load_graph_dataset_for_tape, compute_acc_and_f1, set_seed
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -56,8 +56,13 @@ class LMTrainer():
         self.use_gpt_str = cfg.lm.train.llm_name if cfg.lm.train.use_gpt else ""
 
         local_folder = f"../../results/LLMEncoder/TAPE"
-        self.output_dir = f'{local_folder}/{self.dataset_name}{self.use_gpt_str}/{cfg.lm.model.short_name}'
-        self.ckpt_dir = f'{local_folder}/{self.dataset_name}{self.use_gpt_str}/{cfg.lm.model.short_name}'
+        if cfg.re_split:
+            self.re_split_str = '_s_'
+            self.output_dir = f'{local_folder}/{self.dataset_name}{self.re_split_str}{self.use_gpt_str}/{cfg.lm.model.short_name}-seed{self.seed}'
+            self.ckpt_dir = f'{local_folder}/{self.dataset_name}{self.re_split_str}{self.use_gpt_str}/{cfg.lm.model.short_name}-seed{self.seed}'
+        else:
+            self.output_dir = f'{local_folder}/{self.dataset_name}{self.use_gpt_str}/{cfg.lm.model.short_name}-seed{self.seed}'
+            self.ckpt_dir = f'{local_folder}/{self.dataset_name}{self.use_gpt_str}/{cfg.lm.model.short_name}-seed{self.seed}'
         
         if not os.path.exists(local_folder):
             os.makedirs(local_folder, exist_ok=True)
@@ -66,8 +71,12 @@ class LMTrainer():
 
         # Preprocess data
         self.device = torch.device("cuda:0" if cfg.device > 0 else "cpu")
-        data, num_classes, text = load_graph_dataset_for_tape(self.dataset_name, self.device, use_gpt=cfg.lm.train.use_gpt, gpt_name=cfg.lm.train.llm_name)
-        
+        set_seed(self.seed)
+        data, num_classes, text = load_graph_dataset_for_tape(self.dataset_name, 
+                                                              self.device, 
+                                                              use_gpt=cfg.lm.train.use_gpt, 
+                                                              gpt_name=cfg.lm.train.llm_name, 
+                                                              re_split=cfg.re_split)
         self.data = data
         self.num_nodes = data.y.size(0)
         self.n_labels = num_classes

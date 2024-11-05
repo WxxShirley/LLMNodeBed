@@ -13,16 +13,19 @@ def re_split_data(num_node, train_percent=0.6, val_percent=0.2, device="cuda:0")
     train_ids = np.sort(node_ids[:int(num_node * train_percent)])
     val_ids = np.sort(node_ids[int(num_node * train_percent): int(num_node * (train_percent + val_percent))])
     test_ids = np.sort(node_ids[int(num_node * (train_percent + val_percent)): ])
-
-    train_mask = torch.BoolTensor(np.array([True if idx in train_ids else False for idx in node_ids]))
-    val_mask = torch.BoolTensor(np.array([True if idx in val_ids else False for idx in node_ids]))
-    test_mask = torch.BoolTensor(np.array([True if idx in test_ids else False for idx in node_ids])) 
     
+    train_mask = torch.tensor(np.array([idx in train_ids for idx in range(num_node)]))
+    val_mask = torch.tensor(np.array([idx in val_ids for idx in range(num_node)]))
+    test_mask = torch.tensor(np.array([idx in test_ids for idx in range(num_node)])) 
+    # For debugging
+    print(train_ids[:20], val_ids[:20], test_ids[:20])
+
     return train_mask.to(device), val_mask.to(device), test_mask.to(device)
     
 
 def load_graph_dataset(dataset_name, device, emb_model="shallow", re_split=False):
     graph_data = torch.load(f"../datasets/{dataset_name}.pt").to(device)
+    graph_data.edge_index = to_undirected(graph_data.edge_index) if dataset_name in ["citeseer", "arxiv"] else graph_data.edge_index
     
     if emb_model != "shallow":
         assert os.path.exists(f"../datasets/{emb_model}/{dataset_name}.pt")
@@ -71,8 +74,9 @@ def load_graph_dataset_for_zerog(dataset_name, device, prefix="../..", re_split=
     return graph_data
 
 
-def load_graph_dataset_for_tape(dataset_name, device, use_gpt=False, gpt_name="GPT-3.5-turbo", re_split=False):
+def load_graph_dataset_for_tape(dataset_name, device, use_gpt=False, gpt_name="Qwen-3B", re_split=False):
     graph_data = torch.load(f"../../datasets/{dataset_name}.pt").to(device)
+    graph_data.edge_index = to_undirected(graph_data.edge_index) if dataset_name in ["citeseer", "arxiv"] else graph_data.edge_index
     
     if len(graph_data.train_mask) == 10:
         graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]

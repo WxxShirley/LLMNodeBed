@@ -15,6 +15,8 @@ def set_cfg(cfg):
     cfg.seed = None
     # Number of runs with random init
     cfg.runs = 1
+    # Semi-supervised setting (0) or supervised setting (1: re-split train/val/test following 60%/20%/20%)
+    cfg.re_split = 0
     cfg.gnn = CN()
     cfg.lm = CN()
 
