@@ -36,14 +36,15 @@ def sample_test_indexes(test_indexes, labels, sample_ratio):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="instagram")
+    parser.add_argument("--dataset", type=str, default="wikics")
     # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o-mini
     parser.add_argument("--model_name", type=str, default="gpt-4o-mini")
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--prediction_type", type=str, default="none")
 
     # for sample testing
-    parser.add_argument("--sample_ratio", type=float, default=0.1)
+    # ig 0.1 pubmed 0.06 reddit 0.04 wikics 0.2
+    parser.add_argument("--sample_ratio", type=float, default=0.2)
     parser.add_argument("--seed", type=int, default=42)
 
     args = parser.parse_args()
@@ -81,16 +82,16 @@ if __name__ == "__main__":
     write_file = open(file_path, 'a', newline='')
 
     sampled_test_index = sample_test_indexes(test_indexes, labels, args.sample_ratio)
-    # # for index in test_indexes:
-    # for index in sampled_test_index:
-    #     if index in has_inferenced_index:
-    #         continue
-    #     try:
-    #         make_prediction = prediction(args.prediction_type, args.dataset, args.model_name, index, file_path, graph_data)
-    #         make_prediction.write_in_file()
-    #     except Exception as e:
-    #         # time.sleep(1)
-    #         print(f"[ERROR] {index} encounter error {e}")
-    #
-    # # Calculate acc and f1
-    # evaluate(file_path, args.model_name, args.dataset)
+    # for index in test_indexes:
+    for index in sampled_test_index:
+        if index in has_inferenced_index:
+            continue
+        try:
+            make_prediction = prediction(args.prediction_type, args.dataset, args.model_name, index, file_path, graph_data)
+            make_prediction.write_in_file()
+        except Exception as e:
+            # time.sleep(1)
+            print(f"[ERROR] {index} encounter error {e}")
+
+    # Calculate acc and f1
+    evaluate(file_path, args.model_name, args.dataset)

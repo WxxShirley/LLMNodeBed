@@ -9,7 +9,7 @@ from torch_geometric.utils import to_undirected
 
 sys.path.append("../")
 from common import RAW_NEIGHBOR_PROMPTS as PROMPT_DICT
-from common import load_graph_dataset, compute_acc_and_f1
+from common import load_graph_dataset, normalize_adj_matrix
 
 def kneighbor_index(dataset):
 
