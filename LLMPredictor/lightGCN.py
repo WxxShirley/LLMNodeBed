@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     for _ in range(args.layer):
         node_embeds = torch.mm(adj_normed, node_embeds)
-    #
+
     k_neighbors = kneighbor_index(node_embeds)
     print(k_neighbors)
 
