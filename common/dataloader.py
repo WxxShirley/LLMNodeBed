@@ -105,3 +105,13 @@ def load_graph_dataset_for_tape(dataset_name, device, use_gpt=False, gpt_name="Q
             return graph_data, len(graph_data.label_name), raw_texts
 
     return graph_data, len(graph_data.label_name), graph_data.raw_texts
+
+
+def load_graph_dataset_for_llaga(dataset_name, device, encoder="e5-large", re_split=False):
+    graph_data = load_graph_dataset_for_zerog(dataset_name, device, re_split=re_split)
+    
+    assert os.path.exists(f"../../datasets/{encoder}/{dataset_name}.pt")
+    node_feat = torch.load(f"../../datasets/{encoder}/{dataset_name}.pt", map_location=device).to(device).type(torch.float)
+    graph_data.x = node_feat
+
+    return graph_data
