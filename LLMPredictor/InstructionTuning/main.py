@@ -7,6 +7,8 @@ from dataset import TextDataset
 import os
 import sys 
 import json
+import csv
+import time
 sys.path.append("../..")
 from common import set_seed, load_graph_dataset_for_zerog, compute_acc_and_f1
 
@@ -221,7 +223,9 @@ if __name__ == "__main__":
         tokenizer=tokenizer
     )
     
+    st_time = time.time()
     trainer.train()
+    train_secs = time.time() - st_time
 
     # Load well-trained model 
     batch_size = args.batch_size * 2
@@ -229,7 +233,8 @@ if __name__ == "__main__":
     os.makedirs(write_dir, exist_ok=True)
     write_file = open(f"{write_dir}/{args.dataset}_{args.llm}.json", "w")
     pred_labels, gt_labels = [], [] 
-
+    
+    st_time = time.time()
     for i in range(0, len(test_contents), batch_size):
         batch_data = test_contents[i: min(i+batch_size, len(test_contents))]
         batch_input_ids, batch_attention_mask = tokenizer_test_data(batch_data, max_txt_length=args.max_txt_length, max_origin_txt_length=args.max_origin_txt_length)
@@ -254,8 +259,14 @@ if __name__ == "__main__":
             write_file.write(json.dumps(write_content) + "\n")
             write_file.flush()
             
-            pred_labels.append(pred_label.strip(""))
-            gt_labels.append(label.strip(""))
+            pred_labels.append(pred_label.strip(" "))
+            gt_labels.append(label.strip(" "))
+    inference_secs = time.time() - st_time
     
     acc, f1 = compute_acc_and_f1(pred_labels, gt_labels)
     print(f"Accuracy {acc:.3f}  F1-Score {f1:.3f}")
+    
+    with open(f"summary.csv", 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([args.dataset, args.llm, acc, f1, "Semi" if not args.re_split else "Supervised", f"Seed-{args.seed}", f"Batch Size-{args.batch_size}", f"Epoch-{args.num_epoch}", f"Train Hours-{train_secs/3600:.3f}", f"Inference Seconds-{inference_secs:.2f}"])
+    
