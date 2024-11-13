@@ -4,7 +4,9 @@ from transformers import TrainingArguments, Trainer, IntervalStrategy, AutoModel
 import random
 import torch
 from dataset import TextDataset
+import os
 import sys 
+import json
 sys.path.append("../..")
 from common import set_seed, load_graph_dataset_for_zerog, compute_acc_and_f1
 
@@ -52,8 +54,9 @@ def prepare_graph_instruction_tuning_data(graph_data, data_type="train"):
             "input": origin_txt, 
             "output": label
         })
-            
-    random.shuffle(data_contents)
+    
+    if data_type != "test":      
+        random.shuffle(data_contents)
     # print(data_contents[0])
     return data_contents
 
@@ -106,8 +109,39 @@ def tokenizer_instruction_tuning_data(raw_data, max_txt_length=128, max_origin_t
         "attention_mask": attention_mask,
         "labels": label_input_ids
     }
-    
+
+
+def tokenizer_test_data(batch_data, max_txt_length=128, max_origin_txt_length=128):
+    bos_tokens = tokenizer(BOS, add_special_tokens=False)
+    eos_user_tokens = tokenizer(EOS_USER, add_special_tokens=False)
+
+    full_input_ids, full_attention_masks = [], []
+    hint_prompt = " Only output the most possible category without any extra contents. "
+    for sample in batch_data:
+        input_left, input_right = descriptions[args.dataset].split("{{node}}")
+        tokenized_input_left, tokenizer_input_right = tokenizer(input_left, add_special_tokens=False), tokenizer(input_right + hint_prompt, add_special_tokens=False)
+        tokenizer_input_right_ids = tokenizer_input_right.input_ids[:max_txt_length]
         
+        tokenized_origin_txt = tokenizer(sample["input"], add_special_tokens=False)
+        origin_txt_ids = tokenized_origin_txt.input_ids[:max_origin_txt_length] 
+        
+        input_ids = bos_tokens.input_ids + tokenized_input_left.input_ids + origin_txt_ids + tokenizer_input_right_ids + eos_user_tokens.input_ids
+        full_input_ids.append(input_ids)
+        full_attention_masks.append([1] * len(input_ids))
+
+    max_length = max([len(x) for x in full_input_ids])
+
+    for i in range(len(full_input_ids)):
+        pad_length = max_length - len(full_input_ids[i])
+        full_input_ids[i] = torch.tensor([0] * pad_length + full_input_ids[i]).to(device)
+        full_attention_masks[i] = torch.LongTensor([0] * pad_length + full_attention_masks[i]).to(device)
+    
+    input_ids = torch.stack(full_input_ids).to(device)
+    attention_mask = torch.stack(full_attention_masks).to(device)
+    
+    return input_ids, attention_mask
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
@@ -134,6 +168,7 @@ if __name__ == "__main__":
     
     tokenizer = AutoTokenizer.from_pretrained(llm_path)
     tokenizer.pad_token_id = 0 
+    tokenizer.padding_side = 'left'
     # TODO: you can adjust the GPU setting based on your own device
     kwargs = {'max_memory': {0: '48GiB'}, 'device_map': "auto"}
     model = AutoModelForCausalLM.from_pretrained(llm_path, **kwargs)
@@ -153,13 +188,14 @@ if __name__ == "__main__":
     graph_data = load_graph_dataset_for_zerog(dataset_name=args.dataset, device=device, prefix="../..", re_split=args.re_split)
     train_contents = prepare_graph_instruction_tuning_data(graph_data, "train")
     val_contents = prepare_graph_instruction_tuning_data(graph_data, "val") 
+    test_contents = prepare_graph_instruction_tuning_data(graph_data, "test")
     
     train_encodings = tokenizer_instruction_tuning_data(train_contents, max_txt_length=args.max_txt_length, max_origin_txt_length=args.max_origin_txt_length, max_ans_length=args.max_ans_length)
     train_dataset = TextDataset(train_encodings) 
     val_encodings = tokenizer_instruction_tuning_data(val_contents, max_txt_length=args.max_txt_length, max_origin_txt_length=args.max_origin_txt_length, max_ans_length=args.max_ans_length)
     val_dataset = TextDataset(val_encodings)
-    
-    print(len(train_dataset), len(val_dataset))
+
+    print(len(train_dataset), len(val_dataset), len(test_contents))
     
     save_dir = f"output/{args.dataset}_{args.llm}"
     
@@ -170,9 +206,9 @@ if __name__ == "__main__":
         per_device_train_batch_size=args.batch_size, 
         num_train_epochs=args.num_epoch, 
         weight_decay=0.01, 
-        eval_steps=10, 
+        eval_steps=20, 
         evaluation_strategy=IntervalStrategy.STEPS,
-        save_steps=10,
+        save_steps=20,
         save_total_limit=1,
         load_best_model_at_end=True
     )
@@ -186,4 +222,40 @@ if __name__ == "__main__":
     )
     
     trainer.train()
-   
+
+    # Load well-trained model 
+    batch_size = args.batch_size * 2
+    write_dir = "prediction"
+    os.makedirs(write_dir, exist_ok=True)
+    write_file = open(f"{write_dir}/{args.dataset}_{args.llm}.json", "w")
+    pred_labels, gt_labels = [], [] 
+
+    for i in range(0, len(test_contents), batch_size):
+        batch_data = test_contents[i: min(i+batch_size, len(test_contents))]
+        batch_input_ids, batch_attention_mask = tokenizer_test_data(batch_data, max_txt_length=args.max_txt_length, max_origin_txt_length=args.max_origin_txt_length)
+        output = ft_model.generate(input_ids=batch_input_ids, 
+                                   attention_mask=batch_attention_mask, 
+                                   max_new_tokens=args.max_ans_length)
+        decode_output = tokenizer.batch_decode(output, skip_special_tokens=True)
+        origin_prompts = tokenizer.batch_decode(batch_input_ids, skip_special_tokens=True)
+        
+        # print(origin_prompts)
+        for idx, pred_content in enumerate(decode_output):
+            origin_prompt = origin_prompts[idx] 
+            label, node_id = batch_data[idx]["output"], batch_data[idx]["id"]
+            
+            pred_label = pred_content.replace(origin_prompt, "")
+            write_content = {
+                "idx": node_id, 
+                "ground-truth": label,
+                "pred": pred_label
+            }
+            print(write_content)
+            write_file.write(json.dumps(write_content) + "\n")
+            write_file.flush()
+            
+            pred_labels.append(pred_label.strip(""))
+            gt_labels.append(label.strip(""))
+    
+    acc, f1 = compute_acc_and_f1(pred_labels, gt_labels)
+    print(f"Accuracy {acc:.3f}  F1-Score {f1:.3f}")
