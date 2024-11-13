@@ -54,17 +54,21 @@ def prepare_graph_instruction_tuning_data(graph_data, data_type="train"):
         })
             
     random.shuffle(data_contents)
+    # print(data_contents[0])
     return data_contents
 
 
-def tokenizer_instruction_tuning_data(raw_data, max_txt_length=256, max_origin_txt_length=128, max_ans_length=16):
+def tokenizer_instruction_tuning_data(raw_data, max_txt_length=128, max_origin_txt_length=128, max_ans_length=16):
+    # Full Input: BOS + Query + EOS_USER + Label + EOS
     bos_tokens = tokenizer(BOS, add_special_tokens=False)
     eos_user_tokens = tokenizer(EOS_USER, add_special_tokens=False)
     eos_tokens = tokenizer(EOS, add_special_tokens=False)
     
     full_input_ids, full_attention_masks, full_labels = [], [], [] 
+    # input_length, label_length = [], []
     for sample in raw_data:
-        input_left, input_right = descriptions[args.dataset].split("{{node}}") 
+        input_left, input_right = descriptions[args.dataset].split("{{node}}")
+        # print(input_left, input_right)
         tokenized_input_left, tokenizer_input_right = tokenizer(input_left, add_special_tokens=False), tokenizer(input_right, add_special_tokens=False)
         tokenizer_input_right_ids = tokenizer_input_right.input_ids[:max_txt_length]
         
@@ -80,7 +84,12 @@ def tokenizer_instruction_tuning_data(raw_data, max_txt_length=256, max_origin_t
         full_attention_masks.append([1] * len(input_ids))
         full_labels.append(label_ids)
         
+        # Statistics for Choosing Suitable Maximum Lengths
+        # input_length.append(len(tokenized_origin_txt.input_ids) + len(tokenizer_input_right.input_ids))
+        # label_length.append(len(tokenied_label.input_ids))
+        
     max_length = max([len(x) for x in full_input_ids])
+    # print(f"Avg Input Length {sum(input_length)/len(input_length):.4f}  Avg Output Length {sum(label_length)/len(label_length):.4f}  Maximum Output Length {max_length}")
     
     for i in range(len(full_input_ids)):
         pad_length = max_length - len(full_input_ids[i])
@@ -106,11 +115,12 @@ if __name__ == "__main__":
     parser.add_argument('--llm', type=str, default="Qwen-3B")
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--device', type=str, default="cuda:0")
-    parser.add_argument('--max_txt_length', type=int, default=512)
-    parser.add_argument('--max_origin_txt_length', type=int, default=256)
-    parser.add_argument('--max_ans_length', type=int, default=16)
+    parser.add_argument('--max_txt_length', type=int, default=128, help="Maximum length of query prompt") 
+    parser.add_argument('--max_origin_txt_length', type=int, default=128, help="Maximum length of node's original text")
+    parser.add_argument('--max_ans_length', type=int, default=16, help="Maximum length of answer")
     parser.add_argument('--num_epoch', type=int, default=2)
     parser.add_argument('--re_split', type=int, default=0)
+    parser.add_argument('--batch_size', type=int, default=8) 
     args = parser.parse_args()
     print(args, "\n")
     
@@ -124,6 +134,7 @@ if __name__ == "__main__":
     
     tokenizer = AutoTokenizer.from_pretrained(llm_path)
     tokenizer.pad_token_id = 0 
+    # TODO: you can adjust the GPU setting based on your own device
     kwargs = {'max_memory': {0: '48GiB'}, 'device_map': "auto"}
     model = AutoModelForCausalLM.from_pretrained(llm_path, **kwargs)
     
@@ -138,6 +149,7 @@ if __name__ == "__main__":
     ft_model = get_peft_model(model, peft_config)
     ft_model.print_trainable_parameters()
     
+    # Prepare training and validation data <origin_txt, label>
     graph_data = load_graph_dataset_for_zerog(dataset_name=args.dataset, device=device, prefix="../..", re_split=args.re_split)
     train_contents = prepare_graph_instruction_tuning_data(graph_data, "train")
     val_contents = prepare_graph_instruction_tuning_data(graph_data, "val") 
@@ -152,10 +164,10 @@ if __name__ == "__main__":
     save_dir = f"output/{args.dataset}_{args.llm}"
     
     training_args = TrainingArguments(
-        output_dir=f"output/{args.dataset}_{args.llm}", 
+        output_dir=save_dir, 
         learning_rate=1e-5, 
-        per_device_eval_batch_size=4, 
-        per_device_train_batch_size=2, 
+        per_device_eval_batch_size=args.batch_size * 2, 
+        per_device_train_batch_size=args.batch_size, 
         num_train_epochs=args.num_epoch, 
         weight_decay=0.01, 
         eval_steps=10, 
@@ -174,4 +186,4 @@ if __name__ == "__main__":
     )
     
     trainer.train()
-    
+   
