@@ -19,7 +19,7 @@ if __name__ == "__main__":
     
     parser.add_argument("--dataset", type=str, default="cora")
     parser.add_argument("--re_split", type=int, default=1)
-    parser.add_argument("--seed", default=0)
+    parser.add_argument("--seed", default=0, type=int)
     parser.add_argument("--llm", type=str, default="Qwen-3B")
     parser.add_argument("--lm_encoder", type=str, default="roberta")
     parser.add_argument("--device", type=str, default="cuda:0")
@@ -49,6 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, default="output")
     parser.add_argument("--grad_steps", type=int, default=4)
     parser.add_argument("--patience", type=int, default=4)
+    parser.add_argument("--llm_freeze", type=int, default=1)
     
     args = parser.parse_args() 
     # wandb.init(project="LLaGA", name=f"{args.dataset}_{args.llm}")
@@ -110,7 +111,7 @@ if __name__ == "__main__":
     best_val_loss = float('inf')
     
     model.model.gradient_checkpointing_enable()
-    llm_config_str = f"{args.llm}_{args.neighbor_template}{'_MEAN' if args.neighbor_template == 'ND' and args.nd_mean else ''}_Epoch{args.num_epochs}{re_split_str}"
+    llm_config_str = f"{args.llm}_{args.neighbor_template}{'_MEAN' if args.neighbor_template == 'ND' and args.nd_mean else ''}_Epoch{args.num_epochs}{re_split_str}{'_LoRA' if not args.llm_freeze else ''}"
     folder_str = f"{args.output_dir}/{args.dataset}"
     for epoch in range(args.num_epochs):
         model.train() 
@@ -161,7 +162,7 @@ if __name__ == "__main__":
     model.eval()
     
     os.makedirs(f"prediction/{args.dataset}", exist_ok=True)
-    path = f"prediction/{args.dataset}/{args.llm}_{args.neighbor_template}{re_split_str}.json"
+    path = f"prediction/{args.dataset}/{args.llm}_{args.neighbor_template}{re_split_str}_seed{args.seed}.json"
     print(f"\n[Prediction] Write predictions on {path} ...")
     progress_bar_test = tqdm(range(len(test_loader)))
     pred_labels, gt_labels = [], []
@@ -186,11 +187,10 @@ if __name__ == "__main__":
                 progress_bar.update(1)
     
     acc, f1 = compute_acc_and_f1(pred_labels, gt_labels)
-    with open("summary.csv", 'a', newline='') as file:
+    with open(f"summary{'_semi' if not args.re_split else ''}.csv", 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([args.dataset, 'Semi-supervised' if not args.re_split else 'Supervised', args.llm, acc, f1, args.neighbor_template, args.hidden_dim, args.lm_encoder, args.num_epochs, args.patience])
+        writer.writerow([args.dataset, args.llm, acc, f1, args.neighbor_template, args.hidden_dim, args.lm_encoder, args.num_epochs, args.patience, args.batch_size, args.lr, args.seed])
     print(f"Accuracy {acc:.3f}  F1-Score {f1:.3f}")
     print('\n## Finishing Time:', get_cur_time(), flush=True)
     print('= ' * 20)
     print("Done!")
-    

@@ -3,6 +3,7 @@ import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import contextlib
 from constant import * 
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 
 class LLaGAModel(torch.nn.Module):
@@ -26,9 +27,19 @@ class LLaGAModel(torch.nn.Module):
         model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16, **kwargs)
         
         # Freeze LLM
-        for _, param in model.named_parameters(): 
-            param.requires_grad = False 
-        
+        if args.llm_freeze:
+            for _, param in model.named_parameters(): 
+                param.requires_grad = False 
+        else:
+            model = prepare_model_for_kbit_training(model) 
+            lora_config = LoraConfig(r=8, 
+                                     lora_alpha=16, 
+                                     target_modules=["q_proj", "v_proj"], 
+                                     lora_dropout=0.05, 
+                                     bias="none", 
+                                     task_type="CAUSAL_LM")
+            model = get_peft_model(model, lora_config)
+            
         self.model = model 
         self.word_embedding = self.model.model.get_input_embeddings()
         self.graph_embedding = graph_embedding
@@ -43,10 +54,10 @@ class LLaGAModel(torch.nn.Module):
         for i in range(args.n_linear_layer):
             if i == 0:
                 linear_layers.append(nn.Linear(input_dim, hidden_dim))
-                linear_layers.append(nn.GELU())
+                linear_layers.append(nn.LeakyReLU())
             elif i != args.n_linear_layer - 1:
                 linear_layers.append(nn.Linear(hidden_dim, hidden_dim))
-                linear_layers.append(nn.GELU())
+                linear_layers.append(nn.LeakyReLU())
             else:
                 linear_layers.append(nn.Linear(hidden_dim, output_dim))
         self.graph_projector = nn.Sequential(*linear_layers).to(self.device)
