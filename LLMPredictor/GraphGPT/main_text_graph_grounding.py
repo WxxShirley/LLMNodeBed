@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--dataset", type=str, default="cora")
-    parser.add_argument("--lm_name", type=str, default="SentenceBert")
+    parser.add_argument("--lm_name", type=str, default="roberta")
     parser.add_argument("--lm_freeze", type=int, default=1)
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--seed", type=int, default=0)
@@ -73,4 +73,5 @@ if __name__ == "__main__":
         print(f"Epoch {epoch+1}/{args.num_epoch} Training Loss {epoch_loss:.4f}  Cost Time {time.time()-st_time:.3f}")
     
     # TODO: Save the well-trained graph embedding for further LLM instruction tuning
+    trained_node_embedding = model.featch_graph_embedding(graph_data)
     

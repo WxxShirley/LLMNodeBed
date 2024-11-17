@@ -28,7 +28,13 @@ class TextGraphCLIP(torch.nn.Module):
             for k, v in self.text_model.named_parameters():
                 v.requires_grad = False
         self.num_neigh_samples = num_samples
-        
+    
+    def featch_graph_embedding(self, graph_data):
+        self.graph_model.eval()
+        node_embed = self.graph_model(graph_data.x, graph_data.edge_index)
+        node_embed = self.graph_projector(node_embed).detach().cpu()
+        return node_embed
+    
     def graph_forward(self, x, edge_index, focus_nodes):
         updated_x = self.graph_model(x, edge_index)
         focus_nodes_embed = updated_x[focus_nodes]
