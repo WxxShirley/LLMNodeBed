@@ -7,14 +7,14 @@
 - [x] *Nov 17* Finish the implementation of representative LLM+GNN methods:
        
  *  **Supervised**
-      * LLM as Embedder: GNN, ENGINE
+      * LLM as Encoder: GNN, ENGINE
       * LLM as Reasoner: TAPE
       * LLM as Predictor: Instruction Tuning, GraphGPT, LLaGA
  * **Zero-shot**
       * LLM's direct inference: GPT-4o, GPT-4
       * LLM's Cross-Domain Ability: ZeroG
 
-- [ ] *Nov 24* Refactor the overall implementation
+- [x] *Nov 24* Refactor the overall implementation
   * Re-organize the folders based on LLM's roles
   * Re-use commonly used modules, including dataloader (add `prefix` argument), constants, prompts, descriptions (and `classes`), checkpoints, lm&llm names and configs, etc
   * Enlarge the experimental datasets
