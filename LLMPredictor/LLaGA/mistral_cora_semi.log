@@ -1,0 +1,49 @@
+= = = = = = = = = = = = = = = = = = = = 
+## Starting Time: 11-26 19:00:45
+Namespace(batch_size=64, dataset='cora', device='cuda:0', eval_batch_size=128, gpu_id=0, grad_steps=4, hidden_dim=2048, hopfield=4, k_hop=2, llm='Mistral-7B', llm_freeze=1, lm_encoder='roberta', lr=0.0005, max_ans_length=16, max_txt_length=256, n_linear_layer=2, nd_mean=1, neighbor_template='HO', num_epochs=12, output_dim=2048, output_dir='../../results/LLaGA', patience=4, re_split=0, sample_size=10, seed=0, token_counter=1, wd=0.05) 
+
+[DATA] Build LapLacian Embedding Matrix torch.Size([111, 111])
+[DATA] Semi-supervised Setting # Train 140 # Val 500 # Test 2068
+Finish loading pre-trained Mistral-7B model!
+[ANALYSIS] # Avg Input Token 124.000 # Avg txt Token 183.38  # Avg Output Token 5.579  Max Output Token 8
+Trainable params 10491904 || all params 7252224000 || trainable% 0.14467
+[TRAIN] Epoch 1|12: Train Loss (Epoch Mean): 11.50871
+[VAL] Epoch: 1|12: Val Loss: 2.45209
+Saving checkpoint at epoch 0 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 2|12: Train Loss (Epoch Mean): 2.11558
+[VAL] Epoch: 2|12: Val Loss: 0.71499
+Saving checkpoint at epoch 1 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 3|12: Train Loss (Epoch Mean): 0.53526
+[VAL] Epoch: 3|12: Val Loss: 0.37738
+Saving checkpoint at epoch 2 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 4|12: Train Loss (Epoch Mean): 0.34155
+[VAL] Epoch: 4|12: Val Loss: 0.27804
+Saving checkpoint at epoch 3 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 5|12: Train Loss (Epoch Mean): 0.23748
+[VAL] Epoch: 5|12: Val Loss: 0.21136
+Saving checkpoint at epoch 4 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 6|12: Train Loss (Epoch Mean): 0.11183
+[VAL] Epoch: 6|12: Val Loss: 0.15082
+Saving checkpoint at epoch 5 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 7|12: Train Loss (Epoch Mean): 0.07380
+[VAL] Epoch: 7|12: Val Loss: 0.14760
+Saving checkpoint at epoch 6 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 8|12: Train Loss (Epoch Mean): 0.07774
+[VAL] Epoch: 8|12: Val Loss: 0.14951
+[TRAIN] Epoch 9|12: Train Loss (Epoch Mean): 0.04767
+[VAL] Epoch: 9|12: Val Loss: 0.15570
+[TRAIN] Epoch 10|12: Train Loss (Epoch Mean): 0.02822
+[VAL] Epoch: 10|12: Val Loss: 0.13957
+Saving checkpoint at epoch 9 to ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+[TRAIN] Epoch 11|12: Train Loss (Epoch Mean): 0.02090
+[VAL] Epoch: 11|12: Val Loss: 0.26405
+[TRAIN] Epoch 12|12: Train Loss (Epoch Mean): 0.01633
+[VAL] Epoch: 12|12: Val Loss: 0.30499
+Loading checkpoint from ../../results/LLaGA/output/cora/Mistral-7B_HO_Epoch12_best.pth
+
+[Prediction] Write predictions on ../../results/LLaGA/prediction/cora_Mistral-7B_seed0.json ...
+Accuracy 82.54  Macro F1-Score 81.38  Weight F1-Score 82.78
+
+## Finishing Time: 11-26 19:07:14
+= = = = = = = = = = = = = = = = = = = = 
+Done!
