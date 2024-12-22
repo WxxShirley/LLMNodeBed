@@ -12,11 +12,12 @@ import numpy as np
 
 
 def prepare_dataloader(g_data): 
-    g_data = g_data.to("cpu")
+    g_data = g_data.to("cpu") # temporarily move to CPU for fast computation
     train_idx = g_data.train_mask.nonzero().squeeze()
     val_idx = g_data.val_mask.nonzero().squeeze()
     test_idx = g_data.test_mask.nonzero().squeeze()
-    kwargs = {'batch_size': args.batch_size, 'num_workers': 4, 'persistent_workers': True}
+    print(f"# Train {train_idx.shape}  # Val {val_idx.shape}  # Test {test_idx.shape}")
+    kwargs = {'batch_size': args.batch_size, 'num_workers': 1, 'persistent_workers': True}
     
     if args.sampler == "random_walk" and args.dataset != "arxiv":
         train_graphs = sampling.collect_subgraphs(train_idx, g_data, walk_steps=args.walk_steps, restart_ratio=args.restart)
@@ -25,14 +26,20 @@ def prepare_dataloader(g_data):
     else:
         save_folder = f"../../datasets/subgraphs"
         os.makedirs(save_folder, exist_ok=True)
-        if os.path.exists(f"{save_folder}/{args.dataset}_train.pt"):
-            train_graphs = torch.load(f"{save_folder}/{args.dataset}_train.pt")
-            val_graphs = torch.load(f"{save_folder}/{args.dataset}_val.pt")
-            test_graphs = torch.load(f"{save_folder}/{args.dataset}_test.pt")
+        supervised_suffix = '_s' if args.re_split else ''
+        if os.path.exists(f"{save_folder}/{args.dataset}{supervised_suffix}_train.pt"):
+            train_graphs = torch.load(f"{save_folder}/{args.dataset}{supervised_suffix}_train.pt")
+            val_graphs = torch.load(f"{save_folder}/{args.dataset}{supervised_suffix}_val.pt")
+            test_graphs = torch.load(f"{save_folder}/{args.dataset}{supervised_suffix}_test.pt")
         else:
             train_graphs = sampling.ego_graphs_sampler(train_idx, g_data, hop=args.k)
             val_graphs = sampling.ego_graphs_sampler(val_idx, g_data, hop=args.k)
             test_graphs = sampling.ego_graphs_sampler(test_idx, g_data, hop=args.k)
+            # Only save large datasets for saving space
+            if args.dataset in ["computer", "photo", "arxiv", "history", "reddit"]:
+                torch.save(train_graphs, f"{save_folder}/{args.dataset}{supervised_suffix}_train.pt")
+                torch.save(val_graphs, f"{save_folder}/{args.dataset}{supervised_suffix}_val.pt")
+                torch.save(test_graphs, f"{save_folder}/{args.dataset}{supervised_suffix}_test.pt")
     
     train_loader = DataLoader(train_graphs, shuffle=True, **kwargs)
     val_loader = DataLoader(val_graphs, **kwargs)
@@ -51,7 +58,6 @@ def train_eval(train_loader, val_loader, test_loader, xs, model_list, prog_list,
             data = data.to(device)
             optimizer.zero_grad()
             last = None 
-            total_loss = 0 
             
             for i, m in enumerate(model_list):
                 m.train()
@@ -64,11 +70,12 @@ def train_eval(train_loader, val_loader, test_loader, xs, model_list, prog_list,
                     out = m(x, data.edge_index)
                 
                 last = out 
-                hid_out = torch.cat([last[data.root_n_index], global_mean_pool(last, data.batch)], dim=1)
-                hid_logits = classifier(hid_out)
-                total_loss += criterion(hid_logits, data.y)
+
+            hid_out = torch.cat([last[data.root_n_index], global_mean_pool(last, data.batch)], dim=1)
+            hid_logits = classifier(hid_out)
+            total_loss = criterion(hid_logits, data.y)
             
-            total_loss.backward(retain_graph=True)
+            total_loss.backward()
             optimizer.step()
             
         val_acc, val_f1, val_weightf1 = efficient_eval(val_loader, xs, model_list, prog_list, alpha_list)
@@ -125,10 +132,10 @@ if __name__ == "__main__":
     
     parser.add_argument("--dataset", type=str, default="cora")
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--encoder", type=str, default="MiniLM", choices=["e5-large", "SentenceBert", "MiniLM", "roberta", "Qwen-3B", "Qwen-7B", "Mistral-7B", "Llama-8B"])
+    parser.add_argument("--encoder", type=str, default="roberta", choices=["e5-large", "SentenceBert", "MiniLM", "roberta", "Qwen-3B", "Qwen-7B", "Mistral-7B", "Llama-8B"])
     parser.add_argument("--re_split", type=int, default=0)
     parser.add_argument("--batch_size", type=int, default=256)
-    parser.add_argument("--run_times", type=int, default=3)
+    parser.add_argument("--run_times", type=int, default=5)
     parser.add_argument("--write_result", type=int, default=1)
     
     parser.add_argument("--r", type=int, default=32)
@@ -163,19 +170,19 @@ if __name__ == "__main__":
     
     cache_file_path = f"../../datasets/{args.encoder}/{args.dataset}_ENGINE.pt"
     if not os.path.exists(cache_file_path):
-        raise FileNotFoundError(f"No cache file found! Please use `python cache.py --dataset DATASET --encoder_name ENCODER` to generate it.")
+        raise FileNotFoundError(f"No cache file found! Please use `python cache.py --dataset DATASET --encoder ENCODER` to generate it.")
     hidden_states = torch.load(cache_file_path)
     hidden_states = [x for x in hidden_states]
     layer_select = list(range(len(hidden_states)))
  
     input_dim, r, hidden = hidden_states[0].shape[1], args.r, args.hidden 
-    reduced_input_dim = int(input_dim / r) # k in EGINE's original paper
+    reduced_input_dim = int(input_dim / r) # k in ENGINE's original paper
     
     final_acc_list, final_f1_list, final_weightf1_list, cost_times = [], [], [], []
     for seed in range(args.run_times): 
         set_seed(seed) 
         
-        graph_data, num_classes, texts = load_graph_dataset_for_tape(args.dataset, device=device, use_gpt=False, re_split=args.re_split)
+        graph_data, num_classes, texts = load_graph_dataset_for_tape(args.dataset, device=device, re_split=args.re_split, use_gpt=False)
         train_loader, val_loader, test_loader = prepare_dataloader(graph_data)
         
         start_time = time.time()
@@ -210,7 +217,7 @@ if __name__ == "__main__":
         optimizer = torch.optim.AdamW(params)
     
         acc, f1, weight_f1 = train_eval(train_loader, val_loader, test_loader, xs_list, model_list, prog_list, alpha_list, optimizer)
-        print(f"Timer {seed+1} {args.encoder}-{args.dataset} Best Acc {acc:.2f} Best F1 {f1:.2f}")
+        print(f"Timer {seed+1} {args.encoder}-{args.dataset} Best Acc {acc:.2f} Best Macro-F1 {f1:.2f}")
         final_acc_list.append(acc)
         final_f1_list.append(f1)
         final_weightf1_list.append(weight_f1)
@@ -227,7 +234,7 @@ if __name__ == "__main__":
         write_file = open(f"../../results/ENGINE/summary{'' if not args.re_split else '_s'}.csv", mode='a', newline='')
         writer = csv.writer(write_file)
         writer.writerow([
-            args.encoder, args.dataset, 
+            args.encoder, args.dataset, "Semi" if not args.re_split else "Supervised",
             f"{acc_mean:.2f}±{acc_std:.2f}", f"{f1_mean:.2f}±{f1_std:.2f}", f"{weightf1_mean:.2f}±{weightf1_std:.2f}", f"{np.round(np.mean(np.array(cost_times)), 2)}s",
             f"gnn_type {args.gnn_type}; #layer {args.n_layers}; hidden {args.hidden}; reduced_input {reduced_input_dim}; sampler {args.sampler}", 
             f"lr {args.lr}"

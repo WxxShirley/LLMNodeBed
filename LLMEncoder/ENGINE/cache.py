@@ -11,7 +11,7 @@ if __name__ == "__main__":
     
     parser.add_argument("--dataset", type=str, default="cora", choices=['cora', "pubmed", "citeseer", "wikics", "arxiv", "instagram", "reddit", "computer", "history", "photo"])
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--encoder", type=str, default="MiniLM", choices=[
+    parser.add_argument("--encoder", type=str, default="roberta", choices=[
         "e5-large", "SentenceBert", "MiniLM", "roberta",
         "Qwen-3B", "Qwen-7B", "Llama-8B", "Mistral-7B"
     ])
@@ -27,7 +27,8 @@ if __name__ == "__main__":
     print('## Starting Time:', get_cur_time(), flush=True)
     print(args, "\n")
     
-    if os.path.exists(f"../../datasets/{args.encoder}/{args.dataset}_cache_emb.pt"):
+    if os.path.exists(f"../../datasets/{args.encoder}/{args.dataset}_ENGINE.pt"):
+        print(f"{args.encoder}-{args.dataset}-ENGINE file already exists!")
         exit()
     
     encoder_type = "LM" if args.encoder in ["MiniLM", "SentenceBert", "e5-large", "roberta"] else "LLM"
@@ -35,10 +36,11 @@ if __name__ == "__main__":
     
     layer_hidden_states = text_encoder.engine_forward(graph_data.raw_texts, pool=args.pool if encoder_type != "LLM" else "mean") 
     # print(len(layer_hidden_states))
+
+    # TODO: you can customize the selected layers setting
     selected_layers_dict = {
-        "MiniLM": [0, 3, 6], "SentenceBert": [0, 3, 6],
-        "roberta": [0, 12, 24], "e5-large": [0, 12, 24],
-        "Qwen-3B": [0, 9, 18, 27, 36], "Mistral-7B": [0, 8, 16, 24, 32], "Llama-8B": [0, 8, 16, 24, 32],
+        "MiniLM": [0, 3, 6], "SentenceBert": [0, 3, 6], "roberta": [0, 12, 24], "e5-large": [0, 12, 24],
+        "Qwen-3B": [0, 9, 18, 27, 36], "Qwen-7B": [0, 9, 18, 27],  "Mistral-7B": [0, 8, 16, 24, 32], "Llama-8B": [0, 8, 16, 24, 32],
     }
     selected_layers = selected_layers_dict[args.encoder]
     
