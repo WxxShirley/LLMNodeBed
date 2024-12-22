@@ -22,10 +22,14 @@ class LLaGAModel(torch.nn.Module):
         self.tokenizer.padding_side = 'left'
         
         kwargs = {
-            # "max_memory": {0: '40GiB', 1: '40GiB'},
             "max_memory": {args.gpu_id: '80GiB'},
             "device_map": "auto",
         }
+        if args.num_gpus == 2:
+            kwargs = {
+                "max_memory": {0: '40GiB', 1: '40GiB'},
+                "device_map": "auto",
+            }
         model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16, **kwargs)
         
         # Freeze LLM

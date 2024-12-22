@@ -26,7 +26,7 @@ def prepare_graph_instruction_tuning_data(graph_data, data_type="train"):
         origin_txt = graph_data.raw_texts[node_id]
         label = classes[args.dataset][graph_data.y[node_id].item()]
         
-        # Constitute training data, each pairs consist of an input query and an output label
+        # Constitute training data, each pair consists of an input query and an output label
         data_contents.append({
             "id": node_id, 
             "input": origin_txt, 
@@ -46,7 +46,7 @@ def tokenizer_instruction_tuning_data(raw_data, max_txt_length=128, max_origin_t
     eos_tokens = tokenizer(EOS, add_special_tokens=False)
     
     full_input_ids, full_attention_masks, full_labels = [], [], [] 
-    # input_length, label_length = [], []
+    query_length, txt_length, label_length = [], [], []
     for sample in raw_data:
         input_left, input_right = descriptions[args.dataset].split("{{node}}")
         # print(input_left, input_right)
@@ -66,11 +66,13 @@ def tokenizer_instruction_tuning_data(raw_data, max_txt_length=128, max_origin_t
         full_labels.append(label_ids)
         
         # Statistics for Choosing Suitable Maximum Lengths
-        # input_length.append(len(tokenized_origin_txt.input_ids) + len(tokenizer_input_right.input_ids))
-        # label_length.append(len(tokenied_label.input_ids))
+        query_length.append(len(tokenizer_input_right.input_ids))
+        txt_length.append(len(tokenized_origin_txt.input_ids))
+        label_length.append(len(tokenied_label.input_ids))
         
     max_length = max([len(x) for x in full_input_ids])
-    # print(f"Avg Input Length {sum(input_length)/len(input_length):.4f}  Avg Output Length {sum(label_length)/len(label_length):.4f}  Maximum Output Length {max_length}")
+    # TODO: we set the maximum input length & maximum txt length based on dataset's statistics
+    print(f"Avg Query Prompt Length {sum(query_length)/len(query_length):.4f} | Avg OriginTxT Length {sum(txt_length)/len(txt_length):.4f} |  Avg Output Length {sum(label_length)/len(label_length):.4f}")
     
     for i in range(len(full_input_ids)):
         pad_length = max_length - len(full_input_ids[i])
@@ -133,18 +135,21 @@ if __name__ == "__main__":
     parser.add_argument('--num_epoch', type=int, default=2)
     parser.add_argument('--re_split', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=8) 
+    parser.add_argument('--num_gpus', type=int, default=1)
     args = parser.parse_args()
     print(args, "\n")
     
     set_seed(args.seed)
     device = torch.device(args.device) 
-    
+
     llm_path = llm_paths[args.llm]
     tokenizer = AutoTokenizer.from_pretrained(llm_path)
     tokenizer.pad_token_id = 0 
     tokenizer.padding_side = 'left'
     # TODO: you can adjust the GPU setting based on your own device
-    kwargs = {'max_memory': {0: '80GiB', 1: '80GiB'}, 'device_map': "auto"}
+    kwargs = {'max_memory': {0: '80GiB'}, 'device_map': "auto"}
+    if args.num_gpus == 2: # specifically for sn14
+        kwargs = {'max_memory': {0: '80GiB', 1: '80GiB'}, 'device_map': "auto"}
     model = AutoModelForCausalLM.from_pretrained(llm_path, **kwargs)
     
     peft_config = LoraConfig(
@@ -170,10 +175,22 @@ if __name__ == "__main__":
     val_dataset = TextDataset(val_encodings)
 
     print(len(train_dataset), len(val_dataset), len(test_contents))
-    
     alg_dir = f"../../results/InstructionTuning"
     save_dir = f"{alg_dir}/output/{args.dataset}_{args.llm}"
     
+    # TODO: adjust the eval_steps more flexible
+    eval_steps = 20
+    if args.dataset in ["cora", "citeseer"]:
+        eval_steps = 20 
+    elif args.dataset in ["wikics", "instagram", "pubmed"]:
+        eval_steps = 40 
+    elif args.dataset in ["reddit", "history", "photo"]:
+        eval_steps = 100 if not args.re_split else 200 
+    elif args.dataset in [ "computer"]:
+        eval_steps = 400 
+    elif args.dataset in ["arxiv"]:
+        eval_steps = 1000
+
     training_args = TrainingArguments(
         output_dir=save_dir, 
         learning_rate=1e-5, 
@@ -181,9 +198,9 @@ if __name__ == "__main__":
         per_device_train_batch_size=args.batch_size, 
         num_train_epochs=args.num_epoch, 
         weight_decay=0.01, 
-        eval_steps=20, 
+        eval_steps=eval_steps, 
         evaluation_strategy=IntervalStrategy.STEPS,
-        save_steps=20,
+        save_steps=eval_steps,
         save_total_limit=1,
         load_best_model_at_end=True
     )
@@ -228,7 +245,7 @@ if __name__ == "__main__":
                 "ground-truth": label,
                 "pred": pred_label
             }
-            print(write_content)
+            # print(write_content)
             write_file.write(json.dumps(write_content) + "\n")
             write_file.flush()
             
@@ -238,10 +255,11 @@ if __name__ == "__main__":
     
     acc, macro_f1, weight_f1 = compute_acc_and_f1(pred_labels, gt_labels)
     print(f"Accuracy {acc}  Macro F1-Score {macro_f1} Weight F1-Score {weight_f1}")
+    print(f"Train Minutes-{train_secs/60:.3f}", f"Inference Seconds-{inference_secs:.2f}", "\n\n")
     
     with open(f"{alg_dir}/summary.csv", 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([args.dataset, args.llm, acc, macro_f1, weight_f1, "Semi" if not args.re_split else "Supervised", f"Seed-{args.seed}", 
                          f"Batch Size-{args.batch_size}", f"Epoch-{args.num_epoch}", 
-                         f"Train Hours-{train_secs/3600:.3f}", f"Inference Seconds-{inference_secs:.2f}"])
+                         f"Train Minutes-{train_secs/60:.3f}", f"Inference Seconds-{inference_secs:.2f}"])
     

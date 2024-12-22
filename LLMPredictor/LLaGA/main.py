@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--token_counter", type=int, default=1)
     parser.add_argument("--gpu_id", type=int, default=0)
+    parser.add_argument("--num_gpus", type=int, default=1)
     
     # Configuration of Neighborhood Encoding
     parser.add_argument("--neighbor_template", default="HO", choices=["ND", "HO"])
@@ -65,7 +66,7 @@ if __name__ == "__main__":
     set_seed(args.seed)
     
     llm_path = llm_paths[args.llm]
-    args.output_dim = {"Qwen-3B": 2048, "Qwen-7B": 3584, "Mistral-7B": 4096, "Llama-8B": 4096}[args.llm]
+    args.output_dim = {"Qwen-3B": 2048, "Qwen-7B": 3584, "Mistral-7B": 4096, "Llama-8B": 4096, "Qwen-14B": 5120}[args.llm]
     
     # Pre-process Node Classification Training Data 
     graph_data = load_graph_dataset_for_llaga(dataset_name=args.dataset, device=device, encoder=args.lm_encoder, re_split=args.re_split)
@@ -116,6 +117,7 @@ if __name__ == "__main__":
     llm_config_str = f"{args.llm}_{args.neighbor_template}_Epoch{args.num_epochs}{re_split_str}{'_LoRA' if not args.llm_freeze else ''}"
     folder_str = f"{args.output_dir}/output/{args.dataset}"
     st_time = time.time()
+    
     for epoch in range(args.num_epochs):
         model.train() 
         
