@@ -12,6 +12,7 @@ def set_seed(seed):
     torch.manual_seed(seed)  # cpu
     torch.cuda.manual_seed_all(seed)  # gpu
     torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
 
 
 def get_cur_time(timezone='Asia/Shanghai', t_format='%m-%d %H:%M:%S'):

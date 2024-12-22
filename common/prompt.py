@@ -5,6 +5,10 @@ CITESEER_EXP = "Question: Which of the following sub-categories of CS does this 
 WIKICS_EXP = "Question: Which of the following sub-categories of CS does this Wikipedia page belong to: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
 INSTAGRAM_EXP = "Question: Which of the following categories does this user on Instagram belong to:  Normal Users, Commercial Users? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
 REDDIT_EXP = "Question: Which of the following categories does this user on Reddit belong to:  Normal Users, Popular Users? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+COMPUTER_EXP = "Question: Which of the following sub-cateogires of computer items does this item belong to: Computer Accessories & Peripherals, Tablet Accessories, Laptop Accessories, Computers & Tablets, Computer Components, Data Storage, Networking Products, Monitors, Servers, Tablet Replacement Parts? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+PHOTO_EXP = "Question: Which of the following sub-categories of photo items does this item belong to: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+HISTORY_EXP = "Question: Which of the following sub-categories of history books does this book belong to: World, Americas, Asia, Military, Europe, Russia, Africa, Ancient Civilizations, Middle East, Historical Study & Educational Resources, Australia & Oceania, Arctic & Antarctica? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
+
 
 EXPLANATION_PROMPTS = {
     "cora": CORA_EXP, 
@@ -13,5 +17,8 @@ EXPLANATION_PROMPTS = {
     "wikics": WIKICS_EXP,
     "arxiv": ARXIV_EXP,
     "instagram": INSTAGRAM_EXP,
-    "reddit": REDDIT_EXP
+    "reddit": REDDIT_EXP,
+    "computer": COMPUTER_EXP,
+    "photo": PHOTO_EXP,
+    "history": HISTORY_EXP
 }
