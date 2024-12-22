@@ -16,8 +16,8 @@ if __name__ == "__main__":
 
     parser.add_argument("--dataset", type=str, default="cora")
     parser.add_argument("--llm_name", type=str, default="Mistral-7B")
-    parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--batch_size", type=str, default=16)
+    parser.add_argument("--device", type=str, default="cuda:1")
+    parser.add_argument("--batch_size", type=int, default=16)
 
     args = parser.parse_args()
     device = torch.device(args.device)
@@ -34,18 +34,18 @@ if __name__ == "__main__":
     llm_tokenizer.pad_token = llm_tokenizer.bos_token
     llm_model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16).to(device)
     llm_tokenizer.pad_token_id = 0 
-    prompt = "Please limit your output categories and response in a concise manner." + prompt_dict[args.dataset]
+    prompt = prompt_dict[args.dataset] + "Please limit your output categories to 3 and response in a concise manner. " 
 
     data_loader = DataLoader(list(enumerate(raw_texts)), batch_size=args.batch_size, sampler=SequentialSampler(list(enumerate(raw_texts))))
-    
     write_dir = f"../../results/TAPE/{args.llm_name}"
-    max_length = 1024 if args.dataset not in ["arxiv"] else 2048
+    max_length = 1024 
     if not os.path.exists(write_dir):
         os.makedirs(write_dir, exist_ok=True)
 
     for batch in tqdm(data_loader):
         text_batch, index_batch = batch[1], batch[0]
-
+        
+        # TODO: check Qwen code
         if "Qwen" in args.llm_name: 
             batch_prompts = []
             for text in text_batch:
@@ -58,27 +58,30 @@ if __name__ == "__main__":
                 batch_prompts.append(revised_text)
             
             model_inputs = llm_tokenizer(batch_prompts, return_tensors="pt", padding=True, truncation=True, max_length=512).to(llm_model.device)
+            input_length = model_inputs.input_ids.shape[1]
             generated_ids = llm_model.generate(**model_inputs, max_new_tokens=max_length)
-            generated_ids = [
-                output_ids[len(input_ids):] for input_ids, output_ids in zip(model_inputs.input_ids, generated_ids)
-            ]
+            generated_ids = [generated_id[input_length:] for generated_id in generated_ids]
             answers = llm_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
             del model_inputs, generated_ids 
         else:
+            # avoid over-length
+            text_batch = [text[:min(len(text), 2048)] for text in text_batch]
+            
             batch_prompts = [f"{text}\n{prompt}" for text in text_batch]
             inputs = llm_tokenizer(batch_prompts, return_tensors="pt", padding=True, truncation=True, max_length=512).to(device)
+            input_length = inputs.input_ids.shape[1] 
+            
             copy_inputs = llm_tokenizer(batch_prompts)
             cur_max_length = max([len(one_sample) for one_sample in copy_inputs["input_ids"]])
             outputs = llm_model.generate(**inputs, max_length=max(max_length, cur_max_length+20))
+            
+            outputs = [output[input_length:] for output in outputs]
             answers = [llm_tokenizer.decode(output, skip_special_tokens=True) for output in outputs]
+            
             del inputs, outputs, copy_inputs
         
         for idx, answer in zip(index_batch, answers):
             with open(f"{write_dir}/{args.dataset}.json", 'a+') as file:
-                prompt_copy = prompt.replace("\n\nAnswer: ", "")
-                answer = answer.replace(prompt_copy, "")
-                answer = answer.replace(raw_texts[idx.item()], "")
-                
                 file.write(json.dumps({"idx": idx.item(), "answer": answer}) + "\n")
                 file.flush()
     

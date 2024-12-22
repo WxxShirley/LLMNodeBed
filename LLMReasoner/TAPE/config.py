@@ -70,7 +70,7 @@ def set_cfg(cfg):
     cfg.lm.train.grad_acc_steps = 1
     # Base learning rate
     cfg.lm.train.lr = 2e-5
-    # Maximal number of epochs
+    # Maximal number of epochs (10 for (semi-supervised) cora, citeseer, pubmed, wikics, instagram, reddit)
     cfg.lm.train.epochs = 10
     # The number of warmup steps
     cfg.lm.train.warmup_epochs = 0.6
@@ -87,7 +87,7 @@ def set_cfg(cfg):
     # Whether or not to use the gpt responses (i.e., explanation and prediction) as text input
     # If not, use the original text attributes (i.e., title and abstract)
     cfg.lm.train.use_gpt = False
-    cfg.lm.train.llm_name = "Qwen-3B"
+    cfg.lm.train.llm_name = "Mistral-7B"
 
     return cfg
 

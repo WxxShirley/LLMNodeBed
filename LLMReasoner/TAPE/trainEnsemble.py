@@ -25,9 +25,7 @@ def run(cfg):
         df = pd.DataFrame(all_acc)
         for f in df.keys():
             df_ = pd.DataFrame([r for r in df[f]])
-            print(f"[{f}] TestAcc: {df_['test_acc'].mean():.2f} ± {df_['test_acc'].std():.2f}, 
-                  TestF1: {df_['test_f1'].mean():.2f} ± {df_['test_f1'].std():.2f},
-                  Test weightF1: {df['test_weight_f1'].mean():.2f} ± {df['test_weight_f1'].std():.2f}")
+            print(f"[{f}] TestAcc: {df_['test_acc'].mean():.2f} ± {df_['test_acc'].std():.2f}, TestF1: {df_['test_f1'].mean():.2f} ± {df_['test_f1'].std():.2f}, Test weightF1: {df_['test_weight_f1'].mean():.2f} ± {df_['test_weight_f1'].std():.2f}")
             results.append({
                 'dataset': cfg.dataset,
                 'llm_name': cfg.lm.train.llm_name,

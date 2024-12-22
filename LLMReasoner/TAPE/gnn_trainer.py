@@ -32,7 +32,7 @@ class GNNTrainer():
         self.num_classes = num_classes
         data.y = data.y.squeeze()
         
-        re_split_prefix, re_split_suffix = '_s_' if cfg.re_split else '', f'-seed{self.seed}' # if cfg.re_split else '' # if self.feature_type == 'E' else ''
+        re_split_prefix, re_split_suffix = '_s_' if cfg.re_split else '', f'-seed{self.seed}'
         # Init gnn feature
         if self.feature_type == 'TA':
             print("Loading pretrained LM features (title and abstract) ...")
@@ -69,7 +69,7 @@ class GNNTrainer():
                                 gnn_type=self.gnn_model_name,
                                 dropout=self.dropout,
                                 # for pubmed (semi-supervised), batch_norm=0
-                                batch_norm=1
+                                batch_norm=1 # if self.dataset_name != "pubmed" else 0
                                 ).to(self.device)
         
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -171,7 +171,7 @@ class EnsembleTrainer():
         self.data = data.to(self.device)
         self.TRAINER = GNNTrainer
 
-    @ torch.no_grad()
+    @torch.no_grad()
     def eval(self, logits):
         pred = logits.argmax(dim=1)
 
