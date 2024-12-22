@@ -1,13 +1,14 @@
 import argparse 
 from torch.utils.data import DataLoader 
 import torch 
+import os
 import argparse
 from dataset import TextGraphGroundDataset
 from text_graph_clip import TextGraphCLIP
 import time
 import sys 
 sys.path.append("../..")
-from common import set_seed, load_graph_dataset_for_llaga, load_graph_dataset_for_zerog
+from common import set_seed, load_graph_dataset
 
 
 if __name__ == "__main__":
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     lm_dim_dict = {"MiniLM": 384, "SentenceBert": 768, "e5-large": 1024, "roberta": 1024}
     
     # graph_data = load_graph_dataset_for_llaga(dataset_name=args.dataset, device=device, encoder=args.lm_name)
-    graph_data = load_graph_dataset_for_zerog(dataset_name=args.dataset, device=device)
+    graph_data = load_graph_dataset(dataset_name=args.dataset, device=device)
     
     graph_dataset = TextGraphGroundDataset(graph_data, num_sampled_neighbors=args.num_sampled_neighbors)
     dataloader = DataLoader(graph_dataset, batch_size=args.batch_size, shuffle=True)
@@ -74,4 +75,6 @@ if __name__ == "__main__":
     
     # TODO: Save the well-trained graph embedding for further LLM instruction tuning
     trained_node_embedding = model.featch_graph_embedding(graph_data)
-    
+    save_dir = f"../../results/GraphGPT/ground_emb"
+    os.makedirs(save_dir, exist_ok=True)
+    torch.save(trained_node_embedding, f"{save_dir}/{args.dataset}.pt")

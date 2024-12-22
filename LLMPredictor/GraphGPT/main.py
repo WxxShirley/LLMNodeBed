@@ -3,15 +3,16 @@ import torch
 import json 
 import sys 
 import csv
+import time
 from tqdm import tqdm
 from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader
 sys.path.append("../..")
-from common import load_graph_dataset_for_llaga, set_seed, get_cur_time, compute_acc_and_f1
+from common import load_graph_dataset_for_llaga, set_seed, get_cur_time, compute_acc_and_f1, save_checkpoint, reload_best_model
+from common import MODEL_PATHs as llm_paths
 from graphgpt_model import GraphGPTModel
 from dataset import GraphInstructionTuningDataset, GraphMatchingDataset, classes
 import argparse
-from ckpt import save_checkpoint, reload_best_model
 
 
 if __name__ == "__main__":
@@ -37,14 +38,14 @@ if __name__ == "__main__":
     parser.add_argument("--s2_max_txt_length", type=int, default=256)
     parser.add_argument("--s2_max_ans_length", type=int, default=16)
     parser.add_argument("--s2_epoch", type=int, default=10)
-    parser.add_argument("--s2_batch_size", type=int, default=4)
+    parser.add_argument("--s2_batch_size", type=int, default=32)
     parser.add_argument("--s2_lr", type=float, default=1e-4)
     parser.add_argument("--s2_patience", type=int, default=2)
     
     parser.add_argument("--output_dim", type=int, default=2048)
     parser.add_argument("--wd", type=float, default=0.05)
     parser.add_argument("--load_ground_embedding", type=int, default=0)
-    parser.add_argument("--output_dir", type=str, default="output")
+    parser.add_argument("--output_dir", type=str, default="../../results/GraphGPT")
     
     args = parser.parse_args()
     
@@ -55,19 +56,17 @@ if __name__ == "__main__":
     device = torch.device(args.device)
     set_seed(args.seed)
     
-    llm_path = {
-        "Qwen-3B": "/root/autodl-tmp/models/qwen/Qwen2___5-3B-Instruct", # 3B
-        "Mistral-7B": "/root/autodl-tmp/models/Mistral-7B/snapshots/Mistral-7B-Instruct-v0.2", # 7B
-    }[args.llm]
-    args.output_dim = {"Qwen-3B": 2048, "Mistral-7B": 4096}[args.llm]
+    llm_path = llm_paths[args.llm]
+    args.output_dim = {"Qwen-3B": 2048, "Qwen-7B": 3584, "Mistral-7B": 4096, "Llama-8B": 4096}[args.llm]
     
     # Prepare Data 
     graph_data = load_graph_dataset_for_llaga(dataset_name=args.dataset, device=torch.device("cpu"), encoder="roberta", re_split=args.re_split)
     graph_embedding = graph_data.x.to(device)
     if args.load_ground_embedding: 
-        assert os.path.exists(f"../../datasets/ground_emb/{args.dataset}.pt"), "Please run `main_text_graph_grounding` to generate grounded embedding first!"
-        graph_embedding = torch.load(f"../../datasets/ground_emb/{args.dataset}.pt").to(device)
+        assert os.path.exists(f"{args.output_dir}/ground_emb/{args.dataset}.pt"), "Please run `main_text_graph_grounding` to generate grounded embedding first!"
+        graph_embedding = torch.load(f"{args.output_dir}/ground_emb/{args.dataset}.pt").to(device)
     
+    st_time = time.time()
     if args.do_stage1: 
         print("Preparing Stage 1 [Graph Matching] ...")
         graph_type = {"cora": "academic_network", "citeseer": "academic_network", "pubmed": "academic_network", "wikics": "academic_network", "arxiv": "academic_network", "reddit": "social_network", "instagram": "social_network"}[args.dataset]
@@ -141,7 +140,7 @@ if __name__ == "__main__":
         model.model.gradient_checkpointing_enable()
         
         llm_config_str = f"{args.llm}_Epoch{args.s2_epoch}"
-        folder_str = f"{args.output_dir}/{args.dataset}"
+        folder_str = f"{args.output_dir}/output/{args.dataset}"
         for epoch in range(args.s2_epoch):
         # for epoch in range(0):
             model.train()
@@ -184,20 +183,21 @@ if __name__ == "__main__":
                 break 
         model = reload_best_model(model, folder_str, llm_config_str)
      
-            
+    train_secs = time.time() - st_time
     torch.cuda.empty_cache()
     torch.cuda.reset_max_memory_allocated()
     
     model.eval()
     
-    os.makedirs(f"prediction/{args.dataset}", exist_ok=True)
+    os.makedirs(f"{args.output_dir}/prediction", exist_ok=True)
     re_split_str = '_s' if args.re_split else ''
-    path = f"prediction/{args.dataset}/{args.llm}{re_split_str}_seed{args.seed}.json"
+    path = f"{args.output_dir}/prediction/{args.dataset}_{args.llm}{re_split_str}_seed{args.seed}.json"
     print(f"\n[Prediction] Write predictions on {path} ...")
     progress_bar = tqdm(range(len(test_loader)))
     
     pred_labels, gt_labels = [], []
     
+    st_time = time.time()
     with open(path, 'w') as file:
         for step, batch in enumerate(test_loader):
             with torch.no_grad():
@@ -217,12 +217,14 @@ if __name__ == "__main__":
                     file.write(json.dumps(write_obj) + "\n")
                     file.flush()
                 progress_bar.update(1)
+    inference_secs = time.time() - st_time
     
-    acc, f1 = compute_acc_and_f1(pred_labels, gt_labels)
-    with open(f"summary{'_semi' if not args.re_split else ''}.csv", 'a', newline='') as file:
+    acc, macrof1, weightf1 = compute_acc_and_f1(pred_labels, gt_labels)
+    with open(f"{args.output_dir}/summary{'_semi' if not args.re_split else ''}.csv", 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([args.dataset, args.llm, acc, f1, args.re_split, args.seed])
-    print(f"Accuracy {acc:.3f}  F1-Score {f1:.3f}")
+        writer.writerow([args.dataset, args.llm, acc, macrof1, weightf1, args.re_split, args.seed,
+                         f"Train Minutes-{train_secs/60:.3f}", f"Inference Seconds-{inference_secs:.2f}"])
+    print(f"Accuracy {acc:.3f}  Macro F1-Score {macrof1:.3f}  Weight F1-Score {weightf1:.3f}")
     print('\n## Finishing Time:', get_cur_time(), flush=True)
     print('= ' * 20)
     print("Done!")               

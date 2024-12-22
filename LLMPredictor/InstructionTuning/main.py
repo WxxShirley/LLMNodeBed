@@ -1,5 +1,5 @@
 import argparse 
-from peft import LoraConfig, get_peft_model 
+from peft import LoraConfig, get_peft_model,  AutoPeftModelForCausalLM
 from transformers import TrainingArguments, Trainer, IntervalStrategy, AutoModelForCausalLM, AutoTokenizer
 import random
 import torch
@@ -10,36 +10,11 @@ import json
 import csv
 import time
 sys.path.append("../..")
-from common import set_seed, load_graph_dataset_for_zerog, compute_acc_and_f1
-
-
-# TODO: this is duplicate with LLaGA/dataset.py 
-# TODO: abstract these parts into the `common` folder
-descriptions = {
-    "cora": "Given a node-centered graph with centric node description: {{node}}, each node represents a paper, we need to classify the center node into 7 classes: Case_Based, Genetic_Algorithms, Neural_Networks, Probabilistic_Methods, Reinforcement_Learning, Rule_Learning, Theory, please tell me which class the center node belongs to?",
-    "pubmed": "Given a node-centered graph with centric node description: {{node}}, each node represents a paper about Diabetes, we need to classify the center node into 3 classes: Experimentally induced diabetes, Type 1 diabetes, Type 2 diabetes, please tell me which class the center node belongs to?",
-    "arxiv": "Given a node-centered graph with centric node description: {{node}}, we need to classify the center node into 40 classes: cs.NA(Numerical Analysis), cs.MM(Multimedia), cs.LO(Logic in Computer Science), cs.CY(Computers and Society), cs.CR(Cryptography and Security), cs.DC(Distributed, Parallel, and Cluster Computing), cs.HC(Human-Computer Interaction), cs.CE(Computational Engineering, Finance, and Science), cs.NI(Networking and Internet Architecture), cs.CC(Computational Complexity), cs.AI(Artificial Intelligence), cs.MA(Multiagent Systems), cs.GL(General Literature), cs.NE(Neural and Evolutionary Computing), cs.SC(Symbolic Computation), cs.AR(Hardware Architecture), cs.CV(Computer Vision and Pattern Recognition), cs.GR(Graphics), cs.ET(Emerging Technologies), cs.SY(Systems and Control), cs.CG(Computational Geometry), cs.OH(Other Computer Science), cs.PL(Programming Languages), cs.SE(Software Engineering), cs.LG(Machine Learning), cs.SD(Sound), cs.SI(Social and Information Networks), cs.RO(Robotics), cs.IT(Information Theory), cs.PF(Performance), cs.CL(Computational Complexity), cs.IR(Information Retrieval), cs.MS(Mathematical Software), cs.FL(Formal Languages and Automata Theory), cs.DS(Data Structures and Algorithms), cs.OS(Operating Systems), cs.GT(Computer Science and Game Theory), cs.DB(Databases), cs.DL(Digital Libraries), cs.DM(Discrete Mathematics), please tell me which class the center node belongs to?",
-    "citeseer": "Given a node-centered graph with centric node description: {{node}}, each node represents a paper, we need to classify the center node into 6 classes: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence), please tell me which class the center node belongs to?",
-    "wikics": "Given a node-centered graph with centric node description: {{node}}, each node represents an entity, we need to classify the center node into 10 classes: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics, please tell me which class the center node belongs to?",
-    "reddit": "Given a node-centered graph with centric node description: {{node}}, each node represents an user, we need to classify the center node into 2 classes: Normal Users and Popular Users, please tell me which class the center node belongs to?",
-    "instagram": "Given a node-centered graph with centric node description: {{node}}, each node represents an user, we need to classify the center node into 2 classes: Normal Users and Commercial Users, please tell me which class the center node belongs to?",
-}
-
-classes = {
-    "arxiv": ["cs.NA(Numerical Analysis)", "cs.MM(Multimedia)", "cs.LO(Logic in Computer Science)", "cs.CY(Computers and Society)", "cs.CR(Cryptography and Security)", "cs.DC(Distributed, Parallel, and Cluster Computing)", "cs.HC(Human-Computer Interaction)", "cs.CE(Computational Engineering, Finance, and Science)", "cs.NI(Networking and Internet Architecture)", "cs.CC(Computational Complexity)", "cs.AI(Artificial Intelligence)", "cs.MA(Multiagent Systems)", "cs.GL(General Literature)", "cs.NE(Neural and Evolutionary Computing)", "cs.SC(Symbolic Computation)", "cs.AR(Hardware Architecture)", "cs.CV(Computer Vision and Pattern Recognition)", "cs.GR(Graphics)", "cs.ET(Emerging Technologies)", "cs.SY(Systems and Control)", "cs.CG(Computational Geometry)", "cs.OH(Other Computer Science)", "cs.PL(Programming Languages)", "cs.SE(Software Engineering)", "cs.LG(Machine Learning)", "cs.SD(Sound)", "cs.SI(Social and Information Networks)", "cs.RO(Robotics)", "cs.IT(Information Theory)", "cs.PF(Performance)", "cs.CL(Computational Complexity)", "cs.IR(Information Retrieval)", "cs.MS(Mathematical Software)", "cs.FL(Formal Languages and Automata Theory)", "cs.DS(Data Structures and Algorithms)", "cs.OS(Operating Systems)", "cs.GT(Computer Science and Game Theory)", "cs.DB(Databases)", "cs.DL(Digital Libraries)", "cs.DM(Discrete Mathematics)"],
-    "cora": ['Rule_Learning', 'Neural_Networks', 'Case_Based', 'Genetic_Algorithms', 'Theory', 'Reinforcement_Learning', 'Probabilistic_Methods'],
-    "pubmed": ['Experimentally induced diabetes', 'Type 1 diabetes', 'Type 2 diabetes'],
-    "citeseer": ['Agents', 'ML (Machine Learning)', 'IR (Information Retrieval)', 'DB (Databases)', 'HCI (Human-Computer Interaction)', 'AI (Artificial Intelligence)'],
-    "wikics": ['Computational Linguistics', 'Databases', 'Operating Systems', 'Computer Architecture', 'Computer Security', 'Internet Protocols', 'Computer File Systems', 'Distributed Computing Architecture', 'Web Technology', 'Programming Language Topics'],
-    "reddit": ['Normal Users', 'Popular Users'],
-    "instagram": ['Normal Users', 'Commercial Users']
-}
-
-
-BOS = '<s>[INST]'
-EOS_USER = '[/INST]'
-EOS = '</s>'
-IGNORE_INDEX = -100 
+from common import set_seed, load_graph_dataset, compute_acc_and_f1
+from common import BOS, EOS_USER, EOS, IGNORE_INDEX 
+from common import CLASSES as classes 
+from common import IT_DESC as descriptions
+from common import MODEL_PATHs as llm_paths
 
 
 def prepare_graph_instruction_tuning_data(graph_data, data_type="train"):
@@ -51,6 +26,7 @@ def prepare_graph_instruction_tuning_data(graph_data, data_type="train"):
         origin_txt = graph_data.raw_texts[node_id]
         label = classes[args.dataset][graph_data.y[node_id].item()]
         
+        # Constitute training data, each pair consists of an input query and an output label
         data_contents.append({
             "id": node_id, 
             "input": origin_txt, 
@@ -70,7 +46,7 @@ def tokenizer_instruction_tuning_data(raw_data, max_txt_length=128, max_origin_t
     eos_tokens = tokenizer(EOS, add_special_tokens=False)
     
     full_input_ids, full_attention_masks, full_labels = [], [], [] 
-    # input_length, label_length = [], []
+    query_length, txt_length, label_length = [], [], []
     for sample in raw_data:
         input_left, input_right = descriptions[args.dataset].split("{{node}}")
         # print(input_left, input_right)
@@ -90,11 +66,13 @@ def tokenizer_instruction_tuning_data(raw_data, max_txt_length=128, max_origin_t
         full_labels.append(label_ids)
         
         # Statistics for Choosing Suitable Maximum Lengths
-        # input_length.append(len(tokenized_origin_txt.input_ids) + len(tokenizer_input_right.input_ids))
-        # label_length.append(len(tokenied_label.input_ids))
+        query_length.append(len(tokenizer_input_right.input_ids))
+        txt_length.append(len(tokenized_origin_txt.input_ids))
+        label_length.append(len(tokenied_label.input_ids))
         
     max_length = max([len(x) for x in full_input_ids])
-    # print(f"Avg Input Length {sum(input_length)/len(input_length):.4f}  Avg Output Length {sum(label_length)/len(label_length):.4f}  Maximum Output Length {max_length}")
+    # TODO: we set the maximum input length & maximum txt length based on dataset's statistics
+    print(f"Avg Query Prompt Length {sum(query_length)/len(query_length):.4f} | Avg OriginTxT Length {sum(txt_length)/len(txt_length):.4f} |  Avg Output Length {sum(label_length)/len(label_length):.4f}")
     
     for i in range(len(full_input_ids)):
         pad_length = max_length - len(full_input_ids[i])
@@ -148,7 +126,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--dataset', type=str, default='cora')
-    parser.add_argument('--llm', type=str, default="Qwen-3B")
+    parser.add_argument('--llm', type=str, default="Mistral-7B")
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--device', type=str, default="cuda:0")
     parser.add_argument('--max_txt_length', type=int, default=128, help="Maximum length of query prompt") 
@@ -157,22 +135,21 @@ if __name__ == "__main__":
     parser.add_argument('--num_epoch', type=int, default=2)
     parser.add_argument('--re_split', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=8) 
+    parser.add_argument('--num_gpus', type=int, default=1)
     args = parser.parse_args()
     print(args, "\n")
     
     set_seed(args.seed)
     device = torch.device(args.device) 
-    
-    llm_path = {
-        "Qwen-3B": "/root/autodl-tmp/models/qwen/Qwen2___5-3B-Instruct", # 3B
-        "Mistral-7B": "/root/autodl-tmp/models/Mistral-7B/snapshots/Mistral-7B-Instruct-v0.2", # 7B
-    }[args.llm]
-    
+
+    llm_path = llm_paths[args.llm]
     tokenizer = AutoTokenizer.from_pretrained(llm_path)
     tokenizer.pad_token_id = 0 
     tokenizer.padding_side = 'left'
     # TODO: you can adjust the GPU setting based on your own device
-    kwargs = {'max_memory': {0: '48GiB'}, 'device_map': "auto"}
+    kwargs = {'max_memory': {0: '80GiB'}, 'device_map': "auto"}
+    if args.num_gpus == 2: # specifically for sn14
+        kwargs = {'max_memory': {0: '80GiB', 1: '80GiB'}, 'device_map': "auto"}
     model = AutoModelForCausalLM.from_pretrained(llm_path, **kwargs)
     
     peft_config = LoraConfig(
@@ -187,7 +164,7 @@ if __name__ == "__main__":
     ft_model.print_trainable_parameters()
     
     # Prepare training and validation data <origin_txt, label>
-    graph_data = load_graph_dataset_for_zerog(dataset_name=args.dataset, device=device, prefix="../..", re_split=args.re_split)
+    graph_data = load_graph_dataset(dataset_name=args.dataset, device=device, re_split=args.re_split)
     train_contents = prepare_graph_instruction_tuning_data(graph_data, "train")
     val_contents = prepare_graph_instruction_tuning_data(graph_data, "val") 
     test_contents = prepare_graph_instruction_tuning_data(graph_data, "test")
@@ -198,9 +175,22 @@ if __name__ == "__main__":
     val_dataset = TextDataset(val_encodings)
 
     print(len(train_dataset), len(val_dataset), len(test_contents))
+    alg_dir = f"../../results/InstructionTuning"
+    save_dir = f"{alg_dir}/output/{args.dataset}_{args.llm}"
     
-    save_dir = f"output/{args.dataset}_{args.llm}"
-    
+    # TODO: adjust the eval_steps more flexible
+    eval_steps = 20
+    if args.dataset in ["cora", "citeseer"]:
+        eval_steps = 20 
+    elif args.dataset in ["wikics", "instagram", "pubmed"]:
+        eval_steps = 40 
+    elif args.dataset in ["reddit", "history", "photo"]:
+        eval_steps = 100 if not args.re_split else 200 
+    elif args.dataset in [ "computer"]:
+        eval_steps = 400 
+    elif args.dataset in ["arxiv"]:
+        eval_steps = 1000
+
     training_args = TrainingArguments(
         output_dir=save_dir, 
         learning_rate=1e-5, 
@@ -208,9 +198,9 @@ if __name__ == "__main__":
         per_device_train_batch_size=args.batch_size, 
         num_train_epochs=args.num_epoch, 
         weight_decay=0.01, 
-        eval_steps=20, 
+        eval_steps=eval_steps, 
         evaluation_strategy=IntervalStrategy.STEPS,
-        save_steps=20,
+        save_steps=eval_steps,
         save_total_limit=1,
         load_best_model_at_end=True
     )
@@ -229,7 +219,7 @@ if __name__ == "__main__":
 
     # Load well-trained model 
     batch_size = args.batch_size * 2
-    write_dir = "prediction"
+    write_dir = f"{alg_dir}/prediction"
     os.makedirs(write_dir, exist_ok=True)
     write_file = open(f"{write_dir}/{args.dataset}_{args.llm}.json", "w")
     pred_labels, gt_labels = [], [] 
@@ -255,7 +245,7 @@ if __name__ == "__main__":
                 "ground-truth": label,
                 "pred": pred_label
             }
-            print(write_content)
+            # print(write_content)
             write_file.write(json.dumps(write_content) + "\n")
             write_file.flush()
             
@@ -263,10 +253,13 @@ if __name__ == "__main__":
             gt_labels.append(label.strip(" "))
     inference_secs = time.time() - st_time
     
-    acc, f1 = compute_acc_and_f1(pred_labels, gt_labels)
-    print(f"Accuracy {acc:.3f}  F1-Score {f1:.3f}")
+    acc, macro_f1, weight_f1 = compute_acc_and_f1(pred_labels, gt_labels)
+    print(f"Accuracy {acc}  Macro F1-Score {macro_f1} Weight F1-Score {weight_f1}")
+    print(f"Train Minutes-{train_secs/60:.3f}", f"Inference Seconds-{inference_secs:.2f}", "\n\n")
     
-    with open(f"summary.csv", 'a', newline='') as file:
+    with open(f"{alg_dir}/summary.csv", 'a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([args.dataset, args.llm, acc, f1, "Semi" if not args.re_split else "Supervised", f"Seed-{args.seed}", f"Batch Size-{args.batch_size}", f"Epoch-{args.num_epoch}", f"Train Hours-{train_secs/3600:.3f}", f"Inference Seconds-{inference_secs:.2f}"])
+        writer.writerow([args.dataset, args.llm, acc, macro_f1, weight_f1, "Semi" if not args.re_split else "Supervised", f"Seed-{args.seed}", 
+                         f"Batch Size-{args.batch_size}", f"Epoch-{args.num_epoch}", 
+                         f"Train Minutes-{train_secs/60:.3f}", f"Inference Seconds-{inference_secs:.2f}"])
     

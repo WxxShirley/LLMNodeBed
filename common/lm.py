@@ -4,6 +4,7 @@ import numpy as np
 from transformers import PreTrainedModel, AutoTokenizer, AutoModel, AutoModelForCausalLM
 from transformers.modeling_outputs import TokenClassifierOutput
 from tqdm import tqdm
+from .model_path import MODEL_PATHs
 
 
 def mean_pooling(model_output, attention_mask):
@@ -18,51 +19,20 @@ def mean_pooling_llm(token_embeddings, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 
-lm_name_dict = {
-    "MiniLM": "sentence-transformers/all-MiniLM-L6-v2", # 22M
-    "SentenceBert": "sentence-transformers/multi-qa-distilbert-cos-v1", # 66M
-    "roberta": "sentence-transformers/all-roberta-large-v1", # 355M
-    "e5-large": "intfloat/e5-large-v2", # 355M
-}
-
-llm_path_dict = {
-    "Qwen-3B": "/root/autodl-tmp/models/qwen/Qwen2___5-3B-Instruct", # 3B
-    "Mistral-7B": "/root/autodl-tmp/models/Mistral-7B/snapshots/Mistral-7B-Instruct-v0.2", # 7B
-    "Llama3-8B": "/root/autodl-tmp/models/LLM-Research/Meta-Llama-3-8B-Instruct", # 8B
-    "Vicuna-13B": "/root/autodl-tmp/models/Vicuna-13B/snapshots/Vicuna-13B-v1.5", # 13B
-    "Llama-13B": "/root/autodl-tmp/models/Llama2/Llama-2-13b-chat-hf" # 13B
-}
-
-
-layer_dict = {
-    "MiniLM": 6,
-    "SentenceBert": 6,
-    "roberta": 24,
-    "e5-large": 24,
-    "Qwen-3B": 36,
-    "Mistral-7B": 32,
-    "Llama3-8B": 32,
-    "Vicuna-13B": 40,
-    "Llama-13B": 40
-}
-
-
 class TextEncoder(nn.Module):
-    def __init__(self, encoder_name, device):
+    def __init__(self, encoder_name, encoder_type, device):
         super(TextEncoder, self).__init__()
 
         self.encoder_name = encoder_name
         self.device = device
 
-        assert encoder_name in list(lm_name_dict.keys()) + list(llm_path_dict.keys())
-        
-        if encoder_name in lm_name_dict.keys():
-            lm_fullname = lm_name_dict[encoder_name]
-            self.tokenizer = AutoTokenizer.from_pretrained(lm_fullname)
-            self.model = AutoModel.from_pretrained(lm_fullname).to(device)
+        if encoder_type == "LM":
+            lm_path = MODEL_PATHs[encoder_name]
+            self.tokenizer = AutoTokenizer.from_pretrained(lm_path)
+            self.model = AutoModel.from_pretrained(lm_path).to(device)
             self.encoder_type = "LM"
         else:
-            llm_path = llm_path_dict[encoder_name]
+            llm_path = MODEL_PATHs[encoder_name]
 
             llm_tokenizer = AutoTokenizer.from_pretrained(llm_path)
             llm_tokenizer.pad_token_id = 0
@@ -72,37 +42,44 @@ class TextEncoder(nn.Module):
             self.encoder_type = "LLM"
             
             self.model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16).to(device)
+            print(self.model)
             self.model.config.pad_token_id = self.model.config.eos_token_id
         
         trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
         print(f"[{encoder_name}] Number of parameters {trainable_params}")
     
-    def engine_forward(self, all_text, max_length=512):
+    def engine_forward(self, all_text, max_length=512, pool="cls"):
+        layer_dict = {
+            "MiniLM": 6, "SentenceBert": 6, "e5-large": 24, "roberta": 24,
+            "Qwen-3B": 36, "Qwen-7B": 28,  "Mistral-7B": 32, "Llama-8B": 32
+        }
         num_layers = layer_dict[self.encoder_name]
         layers = [[] for _ in range(num_layers+1)]
         
-        for input_text in tqdm(all_text, desc="Preparing All Hidden States"):
-            input_text = "Empty text" if len(input_text) == 0 else input_text
-            encoded_input = self.tokenizer(input_text, return_tensors='pt', padding=True, truncation=True, max_length=max_length).to(self.device)
-            with torch.no_grad():
-                output = self.model(**encoded_input, output_hidden_states=True)
-            hidden_states = output["hidden_states"]
-            
-            for i, layer_hid in enumerate(hidden_states):
-                layer_hid = layer_hid.cpu()
-                # print(i, layer_hid.shape)
-                layer_node_hid = mean_pooling_llm(layer_hid, encoded_input["attention_mask"].cpu())
-                layers[i].append(layer_node_hid.cpu())
-        
+        with torch.no_grad():
+            for input_text in tqdm(all_text, desc="Preparing All Hidden States"):
+                input_text = "Empty text" if len(input_text) == 0 else input_text
+                encoded_input = self.tokenizer(input_text, return_tensors='pt', padding=True, truncation=True, max_length=max_length).to(self.device)
+                output = self.model(**encoded_input, output_hidden_states=True) 
+                hidden_states = output["hidden_states"]
+                
+                for i, layer_hid in enumerate(hidden_states):
+                    if pool == "cls":
+                        layer_node_hid = layer_hid[:, 0, :]
+                    else:
+                        layer_node_hid = mean_pooling_llm(layer_hid, encoded_input["attention_mask"])
+                    layers[i].append(layer_node_hid.cpu())
+
         layers_hid = [torch.cat(xs).float() for xs in layers]
-        # layers_shape = [obj.shape for obj in layers_hid]
-        # print(layers_shape)
+        layers_shape = [obj.shape for obj in layers_hid]
+        print(layers_shape)
         return layers_hid
             
     def forward(self, input_text, pooling="cls", max_length=512):
         input_text = "Empty text" if len(input_text) == 0 else input_text
         if self.encoder_type == "LM":
             encoded_input = self.tokenizer(input_text, return_tensors='pt', padding=True, truncation=True, max_length=max_length).to(self.device)
+            
             output = self.model(**encoded_input)
             if pooling == "cls":
                 text_emb = output.last_hidden_state[:, 0, :]

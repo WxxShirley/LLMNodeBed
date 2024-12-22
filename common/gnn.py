@@ -22,7 +22,7 @@ def build_conv(conv_type: str):
 
 
 class GNNEncoder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, n_layers=2, gnn_type="GAT", dropout=0.0, use_softmax=0, 
+    def __init__(self, input_dim, hidden_dim, output_dim, n_layers=2, gnn_type="GCN", dropout=0.0, use_softmax=0, 
                  batch_norm=0, residual_conn=0, jump_knowledge=0):
         super().__init__()
 
@@ -32,7 +32,6 @@ class GNNEncoder(nn.Module):
         self.hidden_dim = hidden_dim 
         self.output_dim = output_dim
         self.dropout = dropout
-        # self.act = F.relu
         self.act = F.leaky_relu
         self.use_softmax = use_softmax
         self.batch_norm = batch_norm

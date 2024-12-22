@@ -12,6 +12,7 @@ def set_seed(seed):
     torch.manual_seed(seed)  # cpu
     torch.cuda.manual_seed_all(seed)  # gpu
     torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = True
 
 
 def get_cur_time(timezone='Asia/Shanghai', t_format='%m-%d %H:%M:%S'):
@@ -44,3 +45,14 @@ def normalize_adj_matrix(edge_index, num_nodes, device):
             deg_inv_sqrt_mat, torch.sparse.mm(adj_normalized, deg_inv_sqrt_mat))
 
     return adj_normalized
+
+
+def prepare_edge_list(edge_index, num_nodes):
+    """Convert [torch.LongTensor] edge_index into [List] edge_list"""
+    row, col = edge_index
+    edge_list = [[] for _ in range(num_nodes)] 
+    
+    row, col = row.numpy(), col.numpy()
+    for i in range(row.shape[0]):
+        edge_list[row[i]].append(int(col[i]))
+    return edge_list 

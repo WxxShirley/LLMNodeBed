@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import contextlib
-from constant import * 
+import sys 
+sys.path.append("../..")
+from common import BOS, EOS_USER, EOS, IGNORE_INDEX, DEFAULT_GRAPH_PAD_ID
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
 
 
@@ -18,12 +20,16 @@ class LLaGAModel(torch.nn.Module):
         self.tokenizer = AutoTokenizer.from_pretrained(llm_path)
         self.tokenizer.pad_token_id = 0
         self.tokenizer.padding_side = 'left'
-        self.device = torch.device(args.device)
-          
+        
         kwargs = {
-            "max_memory": {0: '48GiB'}, 
+            "max_memory": {args.gpu_id: '80GiB'},
             "device_map": "auto",
         }
+        if args.num_gpus == 2:
+            kwargs = {
+                "max_memory": {0: '40GiB', 1: '40GiB'},
+                "device_map": "auto",
+            }
         model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16, **kwargs)
         
         # Freeze LLM
@@ -41,6 +47,8 @@ class LLaGAModel(torch.nn.Module):
             model = get_peft_model(model, lora_config)
             
         self.model = model 
+        # TODO: fix device based on args
+        self.device = self.model.device
         self.word_embedding = self.model.model.get_input_embeddings()
         self.graph_embedding = graph_embedding
         self.position_embedding = structure_embedding

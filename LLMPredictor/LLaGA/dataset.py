@@ -1,34 +1,15 @@
 from torch.utils.data import Dataset
 import copy 
-from constant import *
 import random
 import torch 
 import sys 
 sys.path.append("../..")
 from common import normalize_adj_matrix
+from common import DEFAULT_GRAPH_PAD_ID
+from common import LLaGA_DESC as descriptions
+from common import CLASSES as classes
 import numpy as np
 import scipy.sparse as sp
-
-
-descriptions = {
-    "cora": "Given a node-centered graph: <graph>, each node represents a paper, we need to classify the center node into 7 classes: Case_Based, Genetic_Algorithms, Neural_Networks, Probabilistic_Methods, Reinforcement_Learning, Rule_Learning, Theory, please tell me which class the center node belongs to?",
-    "pubmed": "Given a node-centered graph: <graph>, each node represents a paper about Diabetes, we need to classify the center node into 3 classes: Experimentally induced diabetes, Type 1 diabetes, Type 2 diabetes, please tell me which class the center node belongs to?",
-    "arxiv": "Given a node-centered graph: <graph>, we need to classify the center node into 40 classes: cs.NA(Numerical Analysis), cs.MM(Multimedia), cs.LO(Logic in Computer Science), cs.CY(Computers and Society), cs.CR(Cryptography and Security), cs.DC(Distributed, Parallel, and Cluster Computing), cs.HC(Human-Computer Interaction), cs.CE(Computational Engineering, Finance, and Science), cs.NI(Networking and Internet Architecture), cs.CC(Computational Complexity), cs.AI(Artificial Intelligence), cs.MA(Multiagent Systems), cs.GL(General Literature), cs.NE(Neural and Evolutionary Computing), cs.SC(Symbolic Computation), cs.AR(Hardware Architecture), cs.CV(Computer Vision and Pattern Recognition), cs.GR(Graphics), cs.ET(Emerging Technologies), cs.SY(Systems and Control), cs.CG(Computational Geometry), cs.OH(Other Computer Science), cs.PL(Programming Languages), cs.SE(Software Engineering), cs.LG(Machine Learning), cs.SD(Sound), cs.SI(Social and Information Networks), cs.RO(Robotics), cs.IT(Information Theory), cs.PF(Performance), cs.CL(Computational Complexity), cs.IR(Information Retrieval), cs.MS(Mathematical Software), cs.FL(Formal Languages and Automata Theory), cs.DS(Data Structures and Algorithms), cs.OS(Operating Systems), cs.GT(Computer Science and Game Theory), cs.DB(Databases), cs.DL(Digital Libraries), cs.DM(Discrete Mathematics), please tell me which class the center node belongs to?",
-    "citeseer": "Given a node-centered graph: <graph>, each node represents a paper, we need to classify the center node into 6 classes: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence), please tell me which class the center node belongs to?",
-    "wikics": "Given a node-centered graph: <graph>, each node represents an entity, we need to classify the center node into 10 classes: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics, please tell me which class the center node belongs to?",
-    "reddit": "Given a node-centered graph: <graph>, each node represents an user, we need to classify the center node into 2 classes: Normal Users and Popular Users, please tell me which class the center node belongs to?",
-    "instagram": "Given a node-centered graph: <graph>, each node represents an user, we need to classify the center node into 2 classes: Normal Users and Commercial Users, please tell me which class the center node belongs to?",
-}
-
-classes = {
-    "arxiv": ["cs.NA(Numerical Analysis)", "cs.MM(Multimedia)", "cs.LO(Logic in Computer Science)", "cs.CY(Computers and Society)", "cs.CR(Cryptography and Security)", "cs.DC(Distributed, Parallel, and Cluster Computing)", "cs.HC(Human-Computer Interaction)", "cs.CE(Computational Engineering, Finance, and Science)", "cs.NI(Networking and Internet Architecture)", "cs.CC(Computational Complexity)", "cs.AI(Artificial Intelligence)", "cs.MA(Multiagent Systems)", "cs.GL(General Literature)", "cs.NE(Neural and Evolutionary Computing)", "cs.SC(Symbolic Computation)", "cs.AR(Hardware Architecture)", "cs.CV(Computer Vision and Pattern Recognition)", "cs.GR(Graphics)", "cs.ET(Emerging Technologies)", "cs.SY(Systems and Control)", "cs.CG(Computational Geometry)", "cs.OH(Other Computer Science)", "cs.PL(Programming Languages)", "cs.SE(Software Engineering)", "cs.LG(Machine Learning)", "cs.SD(Sound)", "cs.SI(Social and Information Networks)", "cs.RO(Robotics)", "cs.IT(Information Theory)", "cs.PF(Performance)", "cs.CL(Computational Complexity)", "cs.IR(Information Retrieval)", "cs.MS(Mathematical Software), cs.FL(Formal Languages and Automata Theory)", "cs.DS(Data Structures and Algorithms)", "cs.OS(Operating Systems)", "cs.GT(Computer Science and Game Theory)", "cs.DB(Databases)", "cs.DL(Digital Libraries)", "cs.DM(Discrete Mathematics)"],
-    "cora": ['Rule_Learning', 'Neural_Networks', 'Case_Based', 'Genetic_Algorithms', 'Theory', 'Reinforcement_Learning', 'Probabilistic_Methods'],
-    "pubmed": ['Experimentally induced diabetes', 'Type 1 diabetes', 'Type 2 diabetes'],
-    "citeseer": ['Agents', 'ML (Machine Learning)', 'IR (Information Retrieval)', 'DB (Databases)', 'HCI (Human-Computer Interaction)', 'AI (Artificial Intelligence)'],
-    "wikics": ['Computational Linguistics', 'Databases', 'Operating Systems', 'Computer Architecture', 'Computer Security', 'Internet Protocols', 'Computer File Systems', 'Distributed Computing Architecture', 'Web Technology', 'Programming Language Topics'],
-    "reddit": ['Normal Users', 'Popular Users'],
-    "instagram": ['Normal Users', 'Commercial Users']
-}
 
 
 SYSTEM_PROMPT = "You are a helpful language and graph assistant. You can understand the graph content provided by the user and assist with the node classification task by outputting the label that is most likely to apply to the node."
@@ -151,23 +132,24 @@ def build_hopfield_emb(x: torch.FloatTensor, edge_index: torch.LongTensor, n_lay
 
 
 # Test Codes
-# if __name__ == "__main__":
-#     import argparse
-#     parser = argparse.ArgumentParser()
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
     
-#     parser.add_argument("--dataset", type=str, default="cora")
-#     parser.add_argument("--neighbor_template", default="HO", choices=["ND", "HO"])
-#     parser.add_argument("--k_hop", type=int, default=2)
-#     parser.add_argument("--sample_size", type=int, default=10)
-#     args = parser.parse_args() 
+    parser.add_argument("--dataset", type=str, default="cora")
+    parser.add_argument("--neighbor_template", default="HO", choices=["ND", "HO"])
+    parser.add_argument("--k_hop", type=int, default=2)
+    parser.add_argument("--sample_size", type=int, default=10)
+    args = parser.parse_args() 
     
-#     device = torch.device("cuda:0")
-#     graph_data = torch.load(f"../../datasets/{args.dataset}.pt").to(device)
-#     graph_data.x = torch.load(f"../../datasets/roberta/{args.dataset}.pt").to(device)
-#     graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
-#     train_dataset = LLaGADataset(args, graph_data=graph_data, data_type="train")
+    device = torch.device("cuda:0")
+    graph_data = torch.load(f"../../datasets/{args.dataset}.pt").to(device)
+    graph_data.x = torch.load(f"../../datasets/roberta/{args.dataset}.pt").to(device)
+    # Only for Cora, Citeseer, etc
+    # graph_data.train_mask, graph_data.val_mask, graph_data.test_mask = graph_data.train_mask[0], graph_data.val_mask[0], graph_data.test_mask[0]
+    train_dataset = LLaGADataset(args, graph_data=graph_data, data_type="train")
     
-#     print(train_dataset[0], "\n")
-#     print(train_dataset[1])
-#     build_hopfield_emb(graph_data.x, graph_data.edge_index, 2)
+    print(train_dataset[0], "\n")
+    print(train_dataset[1])
+    # build_hopfield_emb(graph_data.x, graph_data.edge_index, 2)
     

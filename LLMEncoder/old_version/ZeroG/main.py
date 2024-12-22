@@ -1,21 +1,19 @@
-# TODO: code has not been checked yet
 from model import TextLoraModel, descriptions
 import argparse
 import torch 
-import torch.nn as nn
 from dataset import MyTextDataset
 from torch_geometric.data import DataLoader
 import time
 import sys 
 sys.path.append("../../")
-from common import load_graph_dataset, get_cur_time
+from common import load_graph_dataset_for_zerog, get_cur_time
 
 
 def build_args():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--dataset", type=str, default="cora")
-    parser.add_argument("--model_dir", type=str, default="../../results/ZeroG", help="Folder to save model")
+    parser.add_argument("--model_dir", type=str, default="ckpts", help="Folder to save model")
     
     parser.add_argument("--epoch", type=int, default=15)
     parser.add_argument("--if_norm", action="store_true", default=True, help="Indicator of normalization")
@@ -28,12 +26,14 @@ def build_args():
     parser.add_argument("--batch_size", type=int, default=32)
     
     parser.add_argument("--use_lora", type=int, default=1)
-    parser.add_argument("--re_split", type=int, default=1)
     
     args = parser.parse_args()
     
     if args.use_lora == 0:
         args.lr = 2e-5
+    elif args.use_lora == 1 and args.text_encoder in ["roberta", "e5-large"]:
+        args.lr = 1e-3
+
     return args 
 
 
@@ -70,14 +70,14 @@ if __name__ == "__main__":
     print(args, "\n")
 
     # Step 1 - Load all Test Graphs
-    graph_data = load_graph_dataset(dataset_name=args.dataset, device=device, re_split=args.re_split)
+    graph_data = load_graph_dataset_for_zerog(args.dataset, device)
     print(f"[STAGE 1] Loading {args.dataset}'s graph ...")
     
     # Step 2 - Load Wrapped (L)LM Encoder Model
     model = TextLoraModel(args)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"[STAGE 2] Preparing Text Encoder {args.text_encoder} with # Parameters {total_params} ...")
-   
+
     optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=5e-4)
     
     # Step 3 - Preparing Training Data
@@ -86,8 +86,8 @@ if __name__ == "__main__":
     print(f"[STAGE 3] Loading Training Pairs <text, label> from {args.dataset}, forming {len(train_dataloader)} train-loaders ...")
     
     # [Optional] Step 4 - Static (or Zero-shot) Evaluation
-    # res = eval(graph_data)
-    # print(f"[STAGE 4] Finish Zero-shot Evaluation with Performance {res}")
+    res = eval(graph_data)
+    print(f"[STAGE 4] Finish Zero-shot Evaluation with Performance {res}")
     
     # Step 5 - Model Training 
     best_eval_acc = 0 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
             
             epoch_loss += loss.item()
             loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            # nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
             
         # torch.cuda.empty_cache()

@@ -3,7 +3,7 @@ import torch
 from utils import compute_contrastive_loss
 import sys 
 sys.path.append("../..")
-from common import GNNEncoder, lm_name_dict
+from common import GNNEncoder, MODEL_PATHs as lm_name_dict
 
 
 class TextGraphCLIP(torch.nn.Module):
