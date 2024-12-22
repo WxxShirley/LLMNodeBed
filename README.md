@@ -45,6 +45,6 @@
 ## Dataset & Setup
 
 - **Environment Setup**: Check out `requirements.txt` for dependencies.
-- **Datasets**: Download the processed datasets from [this link](https://drive.google.com/drive/folders/1WfBIPA3dMd8qQZ6QlQRg9MIFGMwnPdFj) and place them in the `datasets` folder.
+- **Datasets**: Download the processed datasets from [this link](https://drive.google.com/file/d/14GmRVwhP1pUD_OIhoJU3oATZWTnklhPG/view?usp=sharing) and place them in the `datasets` folder.
 
 
