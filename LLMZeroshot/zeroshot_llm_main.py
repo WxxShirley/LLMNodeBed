@@ -36,11 +36,11 @@ def sample_test_indexes(test_indexes, labels, sample_ratio):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="wikics")
-    # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o-mini
-    parser.add_argument("--model_name", type=str, default="gpt-4o-mini")
+    parser.add_argument("--dataset", type=str, default="cora")
+    # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o
+    parser.add_argument("--model_name", type=str, default="gpt-4o")
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--prediction_type", type=str, default="none")
+    parser.add_argument("--prediction_type", type=str, default="llm")
 
     args = parser.parse_args()
 
@@ -52,13 +52,15 @@ if __name__ == "__main__":
 
     # Create csv file
     if args.prediction_type == "none":
-        zero_shot_predfolder = "../results/LLMPredictor/llm_zero_shot"
-    elif args.prediction_type == "raw":
-        zero_shot_predfolder = "../results/LLMPredictor/llm_raw_neighbors"
+        zero_shot_predfolder = "../results/zero_shot/none"
+    elif args.prediction_type == "cot":
+        zero_shot_predfolder = "../results/zero_shot/cot"
     elif args.prediction_type == "lm":
-        zero_shot_predfolder = "../results/LLMPredictor/llm_lm_neighbors"
+        zero_shot_predfolder = "../results/zero_shot/lm"
+    elif args.prediction_type == "gnn":
+        zero_shot_predfolder = "../results/zero_shot/gnn"
     else:
-        zero_shot_predfolder = "../results/LLMPredictor/llm_llm_neighbors"
+        zero_shot_predfolder = "../results/zero_shot/llm"
 
     file_path = f"{zero_shot_predfolder}/{args.model_name}/{args.dataset}.csv"
     os.makedirs(zero_shot_predfolder, exist_ok=True)
@@ -73,7 +75,7 @@ if __name__ == "__main__":
 
     write_file = open(file_path, 'a', newline='')
 
-    # for index in test_indexes:
+    test_indexes = [1,2,3]
     for index in test_indexes:
         if index in has_inferenced_index:
             continue

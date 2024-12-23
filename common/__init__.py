@@ -7,4 +7,5 @@ from .model_path import MODEL_PATHs
 from .descriptions import *
 from .ckpt import * 
 from .constant import *
-from .prompt import EXPLANATION_PROMPTS
+from .prompt import *
+from .apikey import *

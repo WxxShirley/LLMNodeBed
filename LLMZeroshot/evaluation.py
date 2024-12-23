@@ -23,6 +23,9 @@ labels = {
     ],
     "reddit": [
         'Normal Users', 'Popular Users'
+    ],
+    "photo": [
+        "Video Surveillance", "Accessories", "Binoculars & Scopes", "Video", "Lighting & Studio", "Bags & Cases", "Tripods & Monopods", "Flashes", "Digital Cameras", "Film Photography", "Lenses", "Underwater Photography"
     ]
 }
 
@@ -44,6 +47,13 @@ def check_correct(dataset, row):
         new_labels = [item.replace('_', '-') for item in false_labels]
         false_labels.extend(new_labels)
 
+        # lower case
+        true_labels.append(row[2].lower())
+        true_labels.append(true_labels[1].lower())
+        new_labels = [item.lower() for item in false_labels]
+        false_labels.extend(new_labels)
+    
+    elif dataset == "photo":
         # lower case
         true_labels.append(row[2].lower())
         true_labels.append(true_labels[1].lower())
@@ -105,7 +115,7 @@ def write_correctness(file_path,dataset):
             continue
         check_result = check_correct(dataset, row)
         row.append(check_result)
-        #row[3] = check_result
+        #row[4] = check_result
 
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -113,7 +123,16 @@ def write_correctness(file_path,dataset):
 
 
 
-
+def num_tokens(file_path, dataset):
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        num_token = 0
+        num_item = 0
+        for row in reader:
+            num_token = num_token + int(row[3])
+            num_item = num_item +1
+    
+    return num_token/num_item
 
 
 
@@ -131,11 +150,11 @@ def evaluate(file_path, model_name, dataset):
             
 
             total_num += 1
-            if row[3] == "correct":
+            if row[4] == "correct":
                 true_labels.append(row[2])
                 predict_labels.append(row[2])
 
-            elif row[3] == "wrong":
+            elif row[4] == "wrong":
                 found = 0
                 true_labels.append(row[2])
                 for item in labels[dataset]:
@@ -164,14 +183,19 @@ def evaluate(file_path, model_name, dataset):
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
-                    
+
+                    elif dataset == "photo":
+                        if item.lower() in row[1]:
+                            found +=1                            
+                            if found <= 1:
+                                predict_labels.append(item)
                     else:
                         if item in row[1]:
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
             
-            elif row[3] == "uncertain":
+            elif row[4] == "uncertain":
                 predict_labels.append(row[1])
                 true_labels.append(row[2])
 
@@ -181,9 +205,10 @@ def evaluate(file_path, model_name, dataset):
                 true_labels.append(row[2])
 
     hallucination_rate = hallucination/total_num
-    accuracy, f1 = compute_acc_and_f1(predict_labels, true_labels)
-    print(f'Accuracy: {accuracy:.3f}, F1 Score: {f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}')
+    accuracy, macro_f1, weighted_f1 = compute_acc_and_f1(predict_labels, true_labels)
+    num_token = num_tokens(file_path, dataset)
+    print(f'Accuracy: {accuracy:.3f}, F1 Score: {macro_f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}, avg tokens:{num_token:.3f}')
 
     with open(file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([f'Accuracy: {accuracy:.3f}', f'F1 Score: {f1:.3f}', f'Hallucination Rate: {hallucination_rate:.3f}'])
+        writer.writerow([f'Accuracy: {accuracy:.3f}', f'F1 Score: {macro_f1:.3f}', f'Hallucination Rate: {hallucination_rate:.3f}', f'avg tokens:{num_token:.3f}'])
