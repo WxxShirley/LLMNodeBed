@@ -15,7 +15,7 @@ from torch_geometric.utils.convert import to_networkx
 import tiktoken
 
 sys.path.append("../")
-from common import ZEROSHOT_PROMPTS, RAW_NEIGHBOR_PROMPTS, LM_NEIGHBOR_PROMPTS, LLM_NEIGHBOR_PROMPTS, GNN_NEIGHBOR_PROMPTS
+from common import DIRECT_PROMPTS, LM_NEIGHBOR_PROMPTS, LLM_NEIGHBOR_PROMPTS, GNN_NEIGHBOR_PROMPTS
 from common import load_graph_dataset, compute_acc_and_f1
 from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES
 
@@ -58,7 +58,7 @@ class prediction:
         neighbor_info = "\none of its neighbors' feature:".join(one_neighbor_info_list)
 
         if self.prediction_type == "none":
-            question = ZEROSHOT_PROMPTS[self.dataset]
+            question = DIRECT_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{question}"
 
         elif self.prediction_type == "raw":
@@ -85,7 +85,7 @@ class prediction:
 
             question = LM_NEIGHBOR_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{k_1_neighbor_info}\n{question}"
-        
+
         elif self.prediction_type == "gnn":
             k_1_neighbor_list = []
             k_1_neighbor_file_path = f"../datasets/gnn-neighbors/{self.dataset}.csv"
@@ -120,21 +120,21 @@ class prediction:
             discription = f"The following list records some {data_type} related to the current one, with relationship being {link_type}."
             question = "Please summarize the information above with a short paragraph, find some common points which can reflect the category of this paper."
             prompt_content = f"{discription}\n{neighbor_info}\n{question}"
-        
+
         else:
             summary_prediction = prediction("summary", self.dataset, self.model_name, self.index, self.write_file_path,
                                             self.graph_data)
             summary, summary_token_len = summary_prediction.get_response()
             question = LLM_NEIGHBOR_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{summary}\n{question}"
-        
+
         if self.prediction_type != "llm":
             input_tokens = enc.encode(prompt_content)
             input_tokens_len = len(input_tokens)
         else:
             input_tokens = enc.encode(prompt_content)
             input_tokens_len = summary_token_len + len(input_tokens)
-        
+
         return prompt_content, input_tokens_len
 
     def get_response(self):
@@ -181,17 +181,17 @@ class prediction:
                 current_llm = GPT4o_RESOURCES
             else:
                 current_llm = GPT4_RESOURCE
-                
+
             kvs = current_llm["pairs"][3]
             client = AzureOpenAI(
-                azure_endpoint = kvs["endpoint"], 
-                api_key = kvs["key"],
-                api_version = current_llm["version"],
+                azure_endpoint=kvs["endpoint"],
+                api_key=kvs["key"],
+                api_version=current_llm["version"],
             )
 
             response = client.chat.completions.create(
                 model=current_llm["model"],
-                messages = [
+                messages=[
                     {"role": "system", "content": "You are a helpful assistant"},
                     {"role": "user", "content": prompt_content},
                 ]
@@ -218,12 +218,10 @@ class prediction:
 
         if self.prediction_type == "summary":
             print(prediction)
-        
+
         output_tokens = enc.encode(prediction)
         all_length = len(output_tokens) + input_tokens_len
         return prediction, all_length
-
-
 
     def write_in_file(self):
 

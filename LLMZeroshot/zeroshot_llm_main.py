@@ -8,7 +8,6 @@ from evaluation import evaluate
 import numpy as np
 
 sys.path.append("../")
-from common import LLM_NEIGHBOR_PROMPTS as PROMPT_DICT
 from common import load_graph_dataset, compute_acc_and_f1, set_seed
 
 def sample_test_indexes(test_indexes, labels, sample_ratio):
@@ -40,7 +39,7 @@ if __name__ == "__main__":
     # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o
     parser.add_argument("--model_name", type=str, default="gpt-4o")
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--prediction_type", type=str, default="llm")
+    parser.add_argument("--prediction_type", type=str, default="none")
 
     args = parser.parse_args()
 
@@ -75,7 +74,6 @@ if __name__ == "__main__":
 
     write_file = open(file_path, 'a', newline='')
 
-    test_indexes = [1,2,3]
     for index in test_indexes:
         if index in has_inferenced_index:
             continue
