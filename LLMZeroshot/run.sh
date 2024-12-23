@@ -2,7 +2,8 @@ for DATASET in  photo cora pubmed wikics instagram ; do
    for MODELNAME in gpt-4o; do
         for PREDICTION_TYPE in none lm gnn llm; do
             python zeroshot_llm_main.py --prediction_type=$PREDICTION_TYPE --model_name=$MODELNAME --dataset=$DATASET
-    done
+      done
+  done
 done
 
 
