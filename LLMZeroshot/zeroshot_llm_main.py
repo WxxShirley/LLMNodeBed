@@ -42,19 +42,11 @@ if __name__ == "__main__":
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--prediction_type", type=str, default="none")
 
-    # for sample testing
-    # ig 0.1 pubmed 0.06 reddit 0.04 wikics 0.2
-    parser.add_argument("--sample_ratio", type=float, default=0.2)
-    parser.add_argument("--seed", type=int, default=42)
-
     args = parser.parse_args()
-
-    # set random seed
-    set_seed(args.seed)
 
     # Get the index set of the training set on given dataset
     device = torch.device(args.device)
-    graph_data = load_graph_dataset(args.dataset, device)
+    graph_data = load_graph_dataset(args.dataset, device, True, "..")
     test_indexes = torch.where(graph_data.test_mask == True)[0].cpu().numpy().tolist()
     labels = graph_data.y.cpu().numpy()
 
@@ -81,9 +73,8 @@ if __name__ == "__main__":
 
     write_file = open(file_path, 'a', newline='')
 
-    sampled_test_index = sample_test_indexes(test_indexes, labels, args.sample_ratio)
     # for index in test_indexes:
-    for index in sampled_test_index:
+    for index in test_indexes:
         if index in has_inferenced_index:
             continue
         try:
