@@ -7,3 +7,4 @@ done
 # source /data/fge2/try/.venv/bin/activate.csh
 # nohup python3 -u zeroshot_llm_main.py >>../results/LLMPredictor/llm_zero_shot/gpt-4/cora.log
 # nohup ./run.sh >/data/fge2/try/LLMGraphBench/results/zero_shot/gpt4o-run.log
+
