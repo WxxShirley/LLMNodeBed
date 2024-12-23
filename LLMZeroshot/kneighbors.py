@@ -20,7 +20,6 @@ def kneighbor_index(node_embeds):
         for j in range(A.shape[1]):
             if A[i, j]:
                 k_neighbors[i].append(j)
-
     return k_neighbors
 
 def oneneighbor_index(dataset, device):
