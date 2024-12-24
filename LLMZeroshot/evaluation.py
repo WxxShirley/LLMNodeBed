@@ -1,36 +1,41 @@
 import csv
 import sys
 
-
 sys.path.append("../")
 from common import load_graph_dataset, compute_acc_and_f1
 
 labels = {
     "cora": [
-        'Rule_Learning', 'Neural_Networks', 'Case_Based', 'Genetic_Algorithms', 'Theory', 'Reinforcement_Learning', 'Probabilistic_Methods'
+        'Rule_Learning', 'Neural_Networks', 'Case_Based', 'Genetic_Algorithms', 'Theory', 'Reinforcement_Learning',
+        'Probabilistic_Methods'
     ],
     "pubmed": [
-        'Experimental', 'Diabetes Mellitus Type 1', 'Diabetes Mellitus Type 2' 
+        'Experimental', 'Diabetes Mellitus Type 1', 'Diabetes Mellitus Type 2'
     ],
     "citeseer": [
-        'Agents', 'ML (Machine Learning)', 'IR (Information Retrieval)', 'DB (Databases)', 'HCI (Human-Computer Interaction)', 'AI (Artificial Intelligence)'
+        'Agents', 'ML (Machine Learning)', 'IR (Information Retrieval)', 'DB (Databases)',
+        'HCI (Human-Computer Interaction)', 'AI (Artificial Intelligence)'
     ],
     "wikics": [
-       'Computational Linguistics', 'Databases', 'Operating Systems', 'Computer Architecture', 'Computer Security', 'Internet Protocols', 'Computer File Systems', 'Distributed Computing Architecture', 'Web Technology', 'Programming Language Topics'
+        'Computational Linguistics', 'Databases', 'Operating Systems', 'Computer Architecture', 'Computer Security',
+        'Internet Protocols', 'Computer File Systems', 'Distributed Computing Architecture', 'Web Technology',
+        'Programming Language Topics'
     ],
     "instagram": [
-       'Normal Users', 'Commercial Users'
+        'Normal Users', 'Commercial Users'
     ],
     "reddit": [
         'Normal Users', 'Popular Users'
     ],
     "photo": [
-        "Video Surveillance", "Accessories", "Binoculars & Scopes", "Video", "Lighting & Studio", "Bags & Cases", "Tripods & Monopods", "Flashes", "Digital Cameras", "Film Photography", "Lenses", "Underwater Photography"
+        "Video Surveillance", "Accessories", "Binoculars & Scopes", "Video", "Lighting & Studio", "Bags & Cases",
+        "Tripods & Monopods", "Flashes", "Digital Cameras", "Film Photography", "Lenses", "Underwater Photography"
     ]
 }
 
+
 def check_correct(dataset, row):
-    true_labels= []
+    true_labels = []
     true_labels.append(row[2])
 
     false_labels = labels[dataset].copy()
@@ -52,7 +57,7 @@ def check_correct(dataset, row):
         true_labels.append(true_labels[1].lower())
         new_labels = [item.lower() for item in false_labels]
         false_labels.extend(new_labels)
-    
+
     elif dataset == "photo":
         # lower case
         true_labels.append(row[2].lower())
@@ -63,18 +68,18 @@ def check_correct(dataset, row):
     elif dataset == "citeseer":
         # content inside ()
         if row[2] != "Agents":
-            true_labels.append(row[2].split('(')[1].replace(')',''))
-        
+            true_labels.append(row[2].split('(')[1].replace(')', ''))
+
         new_labels = false_labels.copy()
         for item in new_labels:
             if item != "Agents":
-                false_labels.append(item.split('(')[1].replace(')',''))     
+                false_labels.append(item.split('(')[1].replace(')', ''))
 
-        # acronym
+                # acronym
         true_labels.append(row[2].split(' (')[0])
         new_labels = [item.split(' (')[0] for item in false_labels]
         false_labels.extend(new_labels)
-    
+
     elif dataset == "reddit" or dataset == "instagram":
         # delete "s"
         true_labels.append(row[2][:-1])
@@ -89,10 +94,16 @@ def check_correct(dataset, row):
     true_labels_in_completion = [x in row[1] for x in true_labels]
     false_label_in_completion = [x in row[1] for x in false_labels]
 
+    if "none" in row[1] or "None" in row[1]:
+        return "uncertain"
 
     if any(true_labels_in_completion) and not any(false_label_in_completion):
         return "correct"
     elif any(true_labels_in_completion) and any(false_label_in_completion):
+        if dataset == "photo" and row[1] == row[2] and row[2] == "Video Surveillance":
+            return "correct"
+        elif dataset == "photo" and row[2] == "Video" and row[1] == "Video Surveillance":
+            return "wrong"
         return "uncertain"
     elif any(false_label_in_completion):
         return "wrong"
@@ -100,27 +111,21 @@ def check_correct(dataset, row):
         return "hallucination"
 
 
-
-
-
-
-def write_correctness(file_path,dataset):
-
+def write_correctness(file_path, dataset):
     with open(file_path, mode='r', newline='') as file:
         reader = csv.reader(file)
         rows = list(reader)
-    
+
     for row in rows:
-        if row[0][0]< '0' or row[0][0] > '9':
+        if row[0][0] < '0' or row[0][0] > '9':
             continue
         check_result = check_correct(dataset, row)
-        row.append(check_result)
-        #row[4] = check_result
+        # row.append(check_result)
+        row[4] = check_result
 
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerows(rows)
-
 
 
 def num_tokens(file_path, dataset):
@@ -129,11 +134,12 @@ def num_tokens(file_path, dataset):
         num_token = 0
         num_item = 0
         for row in reader:
+            if row[0][0] < '0' or row[0][0] > '9':
+                continue
             num_token = num_token + int(row[3])
-            num_item = num_item +1
-    
-    return num_token/num_item
+            num_item = num_item + 1
 
+    return num_token / num_item
 
 
 def evaluate(file_path, model_name, dataset):
@@ -145,9 +151,8 @@ def evaluate(file_path, model_name, dataset):
     with open(file_path, 'r') as file:
         reader = csv.reader(file)
         for row in reader:
-            if row[0][0]< '0' or row[0][0] > '9':
+            if row[0][0] < '0' or row[0][0] > '9':
                 continue
-            
 
             total_num += 1
             if row[4] == "correct":
@@ -160,24 +165,26 @@ def evaluate(file_path, model_name, dataset):
                 for item in labels[dataset]:
 
                     if dataset == "cora":
-                        if item.replace('_', ' ') in row[1] or item.lower() in row[1] or item in row[1] or item.replace('_', '-') in row[1]: 
+                        if item.replace('_', ' ') in row[1] or item.lower() in row[1] or item in row[1] or item.replace(
+                                '_', '-') in row[1]:
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
-        
+
                     elif dataset == "citeseer":
-                        
+
                         if item == "Agents":
                             if item in row[1]:
                                 found += 1
                                 if found <= 1:
                                     predict_labels.append(item)
                         else:
-                            if item.split('(')[1].replace(')','') in row[1] or item.split(' (')[0] in row[1] or item in row[1]:
+                            if item.split('(')[1].replace(')', '') in row[1] or item.split(' (')[0] in row[1] or item in \
+                                    row[1]:
                                 found += 1
                                 if found <= 1:
                                     predict_labels.append(item)
-                    
+
                     elif dataset == "reddit" or dataset == "instagram":
                         if item[:-1] in row[1] or item in row[1] or item[:-6] in row[1]:
                             found += 1
@@ -185,30 +192,37 @@ def evaluate(file_path, model_name, dataset):
                                 predict_labels.append(item)
 
                     elif dataset == "photo":
-                        if item.lower() in row[1]:
-                            found +=1                            
+                        if row[1] == "Video Surveillance" and row[2] == "Video":
+                            found += 1
                             if found <= 1:
-                                predict_labels.append(item)
+                                predict_labels.append("Video Surveillance")
+                        elif row[2] == "Video Surveillance" and row[1] == "Video":
+                            found += 1
+                            if found <= 1:
+                                predict_labels.append("Video")
+                        else:
+                            if item in row[1]:
+                                found += 1
+                                if found <= 1:
+                                    predict_labels.append(item)
+
                     else:
                         if item in row[1]:
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
-            
-            elif row[4] == "uncertain":
-                predict_labels.append(row[1])
-                true_labels.append(row[2])
 
-            else:
+            elif row[4] == "hallucination":
                 hallucination += 1
-                predict_labels.append(row[1])
-                true_labels.append(row[2])
 
-    hallucination_rate = hallucination/total_num
+    hallucination_rate = hallucination / total_num
     accuracy, macro_f1, weighted_f1 = compute_acc_and_f1(predict_labels, true_labels)
     num_token = num_tokens(file_path, dataset)
-    print(f'Accuracy: {accuracy:.3f}, F1 Score: {macro_f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}, avg tokens:{num_token:.3f}')
+    print(
+        f'Accuracy: {accuracy:.3f}, F1 Score: {macro_f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}, avg tokens:{num_token:.3f}')
 
     with open(file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
-        writer.writerow([f'Accuracy: {accuracy:.3f}', f'F1 Score: {macro_f1:.3f}', f'Hallucination Rate: {hallucination_rate:.3f}', f'avg tokens:{num_token:.3f}'])
+        writer.writerow(
+            [f'Accuracy: {accuracy:.3f}', f'F1 Score: {macro_f1:.3f}', f'Hallucination Rate: {hallucination_rate:.3f}',
+             f'avg tokens:{num_token:.3f}'])

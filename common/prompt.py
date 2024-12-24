@@ -156,3 +156,165 @@ LLM_NEIGHBOR_PROMPTS = {
     "photo": PHOTO_LLM_NEIGHBOR,
 }
 
+CORA_COT = """Here I give you the content of the node itself. 
+Question: Based on this information, which of the following sub-categories of AI does this paper (this node) belong to? 
+Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods.
+
+Answer: Let's think about it step by step. Analyze the content of the node and choose one appropriate category.
+Output format: <reason: >, <classification: >
+"""
+
+CITESEER_COT = """Here I give you the content of the node itself. 
+Question: Which of the following themes does this paper belong to? 
+Here are the 6 categories: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence).
+
+Answer: Let's think about it step by step. Analyze the content of the node and choose one appropriate category
+Output format: <reason: >, <classification: >
+"""
+
+INSTAGRAM_COT = """Here I give you the content of the node itself. 
+Question: Which of the following categories does this Instagram user belong to? 
+Here are the 2 categories: Normal Users, Commercial Users.
+
+Answer: Let's think about it step by step. Analyze the content of the node and choose one appropriate category.
+Output format: <reason: >, <classification: >
+"""
+
+PUBMED_COT = """Here I give you the content of the node itself. 
+Question: Which of the following topics does this scientific publication talk about? 
+Here are the 3 categories: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2.
+
+Answer: Let's think about it step by step. Analyze the content of the node and choose one appropriate category.
+Output format: <reason: >, <classification: >
+"""
+
+WIKICS_COT = """Here I give you the content of the node itself. 
+Question: Which of the following branches of Computer Science does this Wikipedia-based dataset belong to? 
+Here are the 10 categories: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics.
+
+Answer: Let's think about it step by step. Analyze the content of the node and choose one appropriate category.
+Output format: <reason: >, <classification: >
+"""
+
+REDDIT_COT = """Here I give you the content of the node itself. 
+Question: Which of the following categories does this Reddit user belong to? 
+Here are the 2 categories: Normal Users, Popular Users.
+
+Answer: Let's think about it step by step. Analyze the content of the node and choose one appropriate category.
+Output format: <reason: >, <classification: >
+"""
+
+PHOTO_COT = """Here I give you the content of the node itself. 
+Question: Which of the following types does this photo item belong to? 
+Here are the 12 categories: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography.
+
+Answer: Let's think about it step by step. Analyze the content of the node and choose one appropriate category.
+Output format: <reason: >, <classification: >
+"""
+
+COT_PROMPTS = {
+    "cora": CORA_COT,
+    "citeseer": CITESEER_COT,
+    "instagram": INSTAGRAM_COT,
+    "pubmed": PUBMED_COT,
+    "wikics": WIKICS_COT,
+    "reddit": REDDIT_COT,
+    "photo": PHOTO_COT,
+}
+
+
+
+
+
+
+
+
+CORA_TOT = """Here I give you the content of the node itself. 
+Imagine three different experts are answering this question. 
+All experts will write down 1 step of their thinking, then share it with the group. 
+Then all experts will go on to the next step, etc. If any expert realises they're wrong at any point then they leave.
+Question: Based on this information, which of the following sub-categories of AI does this paper (this node) belong to? 
+Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods.
+
+Answer: Let's think through this using a tree of thought approach. 
+Output format: <discussion: >, <classification: >
+"""
+
+CITESEER_TOT = """Here I give you the content of the node itself. 
+Imagine three different experts are answering this question. 
+All experts will write down 1 step of their thinking, then share it with the group. 
+Then all experts will go on to the next step, etc. If any expert realises they're wrong at any point then they leave.
+Question: Based on this information, which of the following theme does this paper belong to? 
+Here are the 6 categories: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence).
+
+Answer: Let's think through this using a tree of thought approach. 
+Output format: <discussion: >, <classification: >
+"""
+
+INSTAGRAM_TOT = """Here I give you the content of the node itself. 
+Imagine three different experts are answering this question. 
+All experts will write down 1 step of their thinking, then share it with the group. 
+Then all experts will go on to the next step, etc. If any expert realises they're wrong at any point then they leave.
+Question: Based on this information, which of the following categories does this Instagram user belong to? 
+Here are the 2 categories: Normal Users, Commercial Users.
+
+Answer: Let's think through this using a tree of thought approach. 
+Output format: <discussion: >, <classification: >
+"""
+
+PUBMED_TOT = """Here I give you the content of the node itself. 
+Imagine three different experts are answering this question. 
+All experts will write down 1 step of their thinking, then share it with the group. 
+Then all experts will go on to the next step, etc. If any expert realises they're wrong at any point then they leave.
+Question: Based on this information, which of the following topic does this scientific publication talk about? 
+Here are the 3 categories: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2.
+
+Answer: Let's think through this using a tree of thought approach. 
+Output format: <discussion: >, <classification: >
+"""
+
+WIKICS_TOT = """Here I give you the content of the node itself. 
+Imagine three different experts are answering this question. 
+All experts will write down 1 step of their thinking, then share it with the group. 
+Then all experts will go on to the next step, etc. If any expert realises they're wrong at any point then they leave.
+Question: Based on this information, which of the following branch of Computer Science does this Wikipedia-based dataset belong to? 
+Here are the 10 categories: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics.
+
+Answer: Let's think through this using a tree of thought approach. 
+Output format: <discussion: >, <classification: >
+"""
+
+REDDIT_TOT = """Here I give you the content of the node itself. 
+Imagine three different experts are answering this question. 
+All experts will write down 1 step of their thinking, then share it with the group. 
+Then all experts will go on to the next step, etc. If any expert realises they're wrong at any point then they leave.
+Question: Based on this information, which of the following categories does this Reddit user belong to? 
+Here are the 2 categories: Normal Users, Popular Users.
+
+Answer: Let's think through this using a tree of thought approach. 
+Output format: <discussion: >, <classification: >
+"""
+
+PHOTO_TOT = """Here I give you the content of the node itself. 
+Imagine three different experts are answering this question. 
+All experts will write down 1 step of their thinking, then share it with the group. 
+Then all experts will go on to the next step, etc. If any expert realises they're wrong at any point then they leave.
+Question: Based on this information, which of the following type does this photo item belong to? 
+Here are the 12 categories: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography.
+
+Answer: Let's think through this using a tree of thought approach. 
+Output format: <discussion: >, <classification: >
+"""
+
+TOT_PROMPTS = {
+    "cora": CORA_TOT,
+    "citeseer": CITESEER_TOT,
+    "instagram": INSTAGRAM_TOT,
+    "pubmed": PUBMED_TOT,
+    "wikics": WIKICS_TOT,
+    "reddit": REDDIT_TOT,
+    "photo": PHOTO_TOT,
+}
+
+
+
