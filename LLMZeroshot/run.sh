@@ -1,6 +1,6 @@
-for DATASET in  cora; do
+for DATASET in  photo; do
     for MODELNAME in gpt-4o; do
-        for PREDICTION_TYPE in lm gnn llm; do
+        for PREDICTION_TYPE in cot tot react; do
             python zeroshot_llm_main.py --prediction_type=$PREDICTION_TYPE --model_name=$MODELNAME --dataset=$DATASET
         done
     done

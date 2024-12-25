@@ -214,10 +214,10 @@ def evaluate(file_path, model_name, dataset):
                             if found <= 1:
                                 predict_labels.append(item)
 
-            elif row[4] == "hallucination":
+            else:
                 hallucination += 1
 
-    hallucination_rate = hallucination / total_num
+    hallucination_rate = hallucination / total_num * 100
     accuracy, macro_f1, weighted_f1 = compute_acc_and_f1(predict_labels, true_labels)
     num_token = num_tokens(file_path, dataset)
     print(

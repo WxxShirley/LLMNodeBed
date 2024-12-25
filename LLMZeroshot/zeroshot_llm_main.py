@@ -35,11 +35,11 @@ def sample_test_indexes(test_indexes, labels, sample_ratio):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="photo")
+    parser.add_argument("--dataset", type=str, default="cora")
     # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o
     parser.add_argument("--model_name", type=str, default="gpt-4o")
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--prediction_type", type=str, default="react")
+    parser.add_argument("--prediction_type", type=str, default="gnn")
 
     args = parser.parse_args()
 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
     write_file = open(file_path, 'a', newline='')
 
-    test_indexes = [112,220,2230]
+    # test_indexes = [112,220,2230]
     for index in test_indexes:
         if index in has_inferenced_index:
             continue
