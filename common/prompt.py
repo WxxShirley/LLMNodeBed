@@ -316,5 +316,63 @@ TOT_PROMPTS = {
     "photo": PHOTO_TOT,
 }
 
+CORA_REACT = """Here I give you the content of the node itself. Your task is to determine which of the following sub-categories of AI this paper belongs to: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. 
+Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the current passage.
+(3) Finish[answer], which returns the answer and finishes the task.
+The output format must be <process: >, <classification: >."""
+
+CITESEER_REACT = """Here I give you the content of the node itself. Your task is to determine which of the following themes this paper belongs to: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence). 
+Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the current passage.
+(3) Finish[answer], which returns the answer and finishes the task.
+The output format must be <process: >, <classification: >."""
+
+INSTAGRAM_REACT = """Here I give you the content of the node itself. Your task is to determine whether this Instagram user belongs to Normal Users or Commercial Users.
+Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the current passage.
+(3) Finish[answer], which returns the answer and finishes the task.
+The output format must be <process: >, <classification: >."""
+
+PUBMED_REACT = """Here I give you the content of the node itself. Your task is to determine which of the following topics this scientific publication talks about: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2.
+Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the current passage.
+(3) Finish[answer], which returns the answer and finishes the task.
+The output format must be <process: >, <classification: >."""
+
+WIKICS_REACT = """Here I give you the content of the node itself. Your task is to determine which branch of Computer Science this Wikipedia-based dataset belongs to: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics.
+Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the current passage.
+(3) Finish[answer], which returns the answer and finishes the task.
+The output format must be <process: >, <classification: >."""
+
+REDDIT_REACT = """Here I give you the content of the node itself. Your task is to determine whether this Reddit user belongs to Normal Users or Popular Users. Popular Users' posted content is often more attractive.
+Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the current passage.
+(3) Finish[answer], which returns the answer and finishes the task.
+The output format must be <process: >, <classification: >."""
+
+PHOTO_REACT = """Here I give you the content of the node itself. Your task is to determine which of the following types this photo item belongs to: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography.
+Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
+(1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
+(2) Lookup[keyword], which returns the next sentence containing keyword in the current passage.
+(3) Finish[answer], which returns the answer and finishes the task.
+The output format must be <process: >, <classification: >."""
+
+REACT_PROMPTS = {
+    "cora": CORA_REACT,
+    "citeseer": CITESEER_REACT,
+    "instagram": INSTAGRAM_REACT,
+    "pubmed": PUBMED_REACT,
+    "wikics": WIKICS_REACT,
+    "reddit": REDDIT_REACT,
+    "photo": PHOTO_REACT,
+}
 
 

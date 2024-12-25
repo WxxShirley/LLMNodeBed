@@ -39,7 +39,7 @@ if __name__ == "__main__":
     # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o
     parser.add_argument("--model_name", type=str, default="gpt-4o")
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--prediction_type", type=str, default="gnn")
+    parser.add_argument("--prediction_type", type=str, default="react")
 
     args = parser.parse_args()
 
@@ -56,6 +56,8 @@ if __name__ == "__main__":
         zero_shot_predfolder = "../results/zero_shot/cot"
     elif args.prediction_type == "tot":
         zero_shot_predfolder = "../results/zero_shot/tot"
+    elif args.prediction_type == "react":
+        zero_shot_predfolder = "../results/zero_shot/react"
     elif args.prediction_type == "lm":
         zero_shot_predfolder = "../results/zero_shot/lm"
     elif args.prediction_type == "gnn":
@@ -76,7 +78,7 @@ if __name__ == "__main__":
 
     write_file = open(file_path, 'a', newline='')
 
-    # test_indexes = [112,220,2230]
+    test_indexes = [112,220,2230]
     for index in test_indexes:
         if index in has_inferenced_index:
             continue

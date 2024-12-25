@@ -17,7 +17,7 @@ import re
 
 sys.path.append("../")
 from common import DIRECT_PROMPTS, LM_NEIGHBOR_PROMPTS, LLM_NEIGHBOR_PROMPTS, GNN_NEIGHBOR_PROMPTS, COT_PROMPTS, \
-    TOT_PROMPTS
+    TOT_PROMPTS, REACT_PROMPTS
 from common import load_graph_dataset, compute_acc_and_f1
 from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES
 
@@ -25,7 +25,7 @@ from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES
 class prediction:
 
     def __init__(self, prediction_type, dataset, model_name, index, write_file_path, graph_data):
-        allowed_types = {'none', 'cot', 'tot', 'lm', 'gnn', 'llm', 'summary'}
+        allowed_types = {'none', 'cot', 'tot', 'react', 'lm', 'gnn', 'llm', 'summary'}
 
         if prediction_type not in allowed_types:
             raise ValueError(f"Invalid prediction_type: {prediction_type}. ")
@@ -69,6 +69,10 @@ class prediction:
 
         elif self.prediction_type == "tot":
             question = TOT_PROMPTS[self.dataset]
+            prompt_content = f"{node_discription}\n{question}"
+
+        elif self.prediction_type == "react":
+            question = REACT_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{question}"
 
         elif self.prediction_type == "lm":
@@ -239,7 +243,7 @@ class prediction:
         else:
             true_label = self.graph_data.label_name[self.graph_data.y[self.index]]
 
-            if self.prediction_type in ['cot', 'tot']:
+            if self.prediction_type in ['cot', 'tot', 'react']:
                 match = re.search(r'<classification:\s*(.*?)>', prediction_content)
                 prediction_content = match.group(1)
 

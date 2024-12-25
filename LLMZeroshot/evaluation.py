@@ -120,8 +120,10 @@ def write_correctness(file_path, dataset):
         if row[0][0] < '0' or row[0][0] > '9':
             continue
         check_result = check_correct(dataset, row)
-        # row.append(check_result)
-        row[4] = check_result
+        try:
+            row[4] = check_result
+        except IndexError:
+            row.append(check_result)
 
     with open(file_path, mode='w', newline='') as file:
         writer = csv.writer(file)
