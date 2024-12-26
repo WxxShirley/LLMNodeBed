@@ -145,6 +145,7 @@ def num_tokens(file_path, dataset):
 
 
 def evaluate(file_path, model_name, dataset):
+    test = 0
     write_correctness(file_path, dataset)
     true_labels, predict_labels = [], []
     total_num = 0
@@ -194,16 +195,13 @@ def evaluate(file_path, model_name, dataset):
                                 predict_labels.append(item)
 
                     elif dataset == "photo":
-                        if row[1] == "Video Surveillance" and row[2] == "Video":
-                            found += 1
-                            if found <= 1:
-                                predict_labels.append("Video Surveillance")
-                        elif row[2] == "Video Surveillance" and row[1] == "Video":
-                            found += 1
-                            if found <= 1:
-                                predict_labels.append("Video")
+                        if item == "Video":
+                            if (item in row[1] or item.lower() in row[1]) and "Video Surveillance" not in row[1]:
+                                found += 1
+                                if found <= 1:
+                                    predict_labels.append(item)
                         else:
-                            if item in row[1]:
+                            if item in row[1] or item.lower() in row[1]:
                                 found += 1
                                 if found <= 1:
                                     predict_labels.append(item)
@@ -216,6 +214,11 @@ def evaluate(file_path, model_name, dataset):
 
             else:
                 hallucination += 1
+
+            if len(predict_labels) != len(true_labels):
+                test = test + 1
+                if test <= 1:
+                    print(row[0], row[1], row[2])
 
     hallucination_rate = hallucination / total_num * 100
     accuracy, macro_f1, weighted_f1 = compute_acc_and_f1(predict_labels, true_labels)
