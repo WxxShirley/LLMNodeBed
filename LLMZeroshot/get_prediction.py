@@ -41,7 +41,7 @@ class prediction:
         # calculate tokens
         enc = tiktoken.get_encoding("o200k_base")
 
-        node_discription = self.graph_data.raw_texts[self.index]
+        node_discription = "Given the information of the node: " + self.graph_data.raw_texts[self.index]
         # get 1-ego neighbor info
         one_neighbor_list = []
         one_neighbor_file_path = f"../datasets/1-neighbors/{self.dataset}.csv"
@@ -57,7 +57,7 @@ class prediction:
         one_neighbor_info_list = []
         for iter in one_neighbor_list_restrict:
             one_neighbor_info_list.append(self.graph_data.raw_texts[iter])
-        neighbor_info = "\none of its neighbors' feature:".join(one_neighbor_info_list)
+        neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(one_neighbor_info_list)
 
         if self.prediction_type == "none":
             question = DIRECT_PROMPTS[self.dataset]
@@ -91,7 +91,7 @@ class prediction:
             k_1_neighbor_info_list = []
             for iter in k_1_neighbor_list:
                 k_1_neighbor_info_list.append(self.graph_data.raw_texts[iter])
-            k_1_neighbor_info = "\none of its neighbors' feature:".join(k_1_neighbor_info_list)
+            k_1_neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(k_1_neighbor_info_list)
 
             question = LM_NEIGHBOR_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{k_1_neighbor_info}\n{question}"
@@ -112,7 +112,7 @@ class prediction:
             k_1_neighbor_info_list = []
             for iter in k_1_neighbor_list:
                 k_1_neighbor_info_list.append(self.graph_data.raw_texts[iter])
-            k_1_neighbor_info = "\none of its neighbors' feature:".join(k_1_neighbor_info_list)
+            k_1_neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(k_1_neighbor_info_list)
 
             question = GNN_NEIGHBOR_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{k_1_neighbor_info}\n{question}"
