@@ -1,19 +1,16 @@
 from openai import OpenAI
 from openai import AzureOpenAI
-import random
 import ast
-import os
-import torch
 import csv
 import sys
-import time
 from http import HTTPStatus
 import dashscope
 from dashscope import Generation
-import networkx as nx
-from torch_geometric.utils.convert import to_networkx
 import tiktoken
 import re
+import requests
+import json
+
 
 sys.path.append("../")
 from common import DIRECT_PROMPTS, LM_NEIGHBOR_PROMPTS, LLM_NEIGHBOR_PROMPTS, GNN_NEIGHBOR_PROMPTS, COT_PROMPTS, \
@@ -128,7 +125,7 @@ class prediction:
                 data_type = "item"
                 link_type = "co-purchase"
             discription = f"The following list records some {data_type} related to the current one, with relationship being {link_type}."
-            question = "Please summarize the information above with a short paragraph, find some common points which can reflect the category of this paper."
+            question = f"Please summarize the information above with a short paragraph, find some common points which can reflect the category of this {data_type}."
             prompt_content = f"{discription}\n{neighbor_info}\n{question}"
 
         else:
@@ -208,6 +205,38 @@ class prediction:
             )
             prediction = response.choices[0].message.content
 
+
+        elif self.model_name == "mistral-7b":
+            headers = {
+                "Content-Type": 'application/json',
+            }
+            url = f"http://127.0.0.1:8008/v1/chat/completions"
+
+            prompt = prompt_content
+            payload = json.dumps({
+                "model": "Mistral-7B-Instruct-v0.2",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.2,
+                "top_p": 0.1,
+                "frequency_penalty": 0,
+                "presence_penalty": 1.05,
+                "max_tokens": 4096,
+                "stream": False,
+                "stop": None
+            })
+            response = requests.post(url, headers=headers, data=payload, timeout=300)
+            try:
+                resp = response.json()
+                msg = resp["choices"][0]["message"]["content"]
+                print(msg)
+                prediction = msg
+            except Exception as e:
+                print("Decode Error")
 
 
         else:

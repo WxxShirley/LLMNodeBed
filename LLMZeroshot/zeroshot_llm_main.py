@@ -36,12 +36,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--dataset", type=str, default="cora")
-    # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o
-    parser.add_argument("--model_name", type=str, default="gpt-4o")
-    parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--prediction_type", type=str, default="gnn")
+    # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o  mistral-7b
+    parser.add_argument("--model_name", type=str, default="mistral-7b")
+    parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--prediction_type", type=str, default="none")
 
     args = parser.parse_args()
+    seed = set_seed(0)
 
     # Get the index set of the training set on given dataset
     device = torch.device(args.device)
@@ -78,7 +79,6 @@ if __name__ == "__main__":
 
     write_file = open(file_path, 'a', newline='')
 
-    # test_indexes = [112,220,2230]
     for index in test_indexes:
         if index in has_inferenced_index:
             continue

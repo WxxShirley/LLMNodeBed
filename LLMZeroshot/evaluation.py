@@ -169,7 +169,7 @@ def evaluate(file_path, model_name, dataset):
 
                     if dataset == "cora":
                         if item.replace('_', ' ') in row[1] or item.lower() in row[1] or item in row[1] or item.replace(
-                                '_', '-') in row[1]:
+                                '_', '-') in row[1] or item.replace('_', ' ').lower() in row[1]:
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
@@ -218,7 +218,7 @@ def evaluate(file_path, model_name, dataset):
             if len(predict_labels) != len(true_labels):
                 test = test + 1
                 if test <= 1:
-                    print(row[0], row[1], row[2])
+                    print(row[0], row[1], row[2], len(predict_labels), len(true_labels), true_labels[-1])
 
     hallucination_rate = hallucination / total_num * 100
     accuracy, macro_f1, weighted_f1 = compute_acc_and_f1(predict_labels, true_labels)
