@@ -274,7 +274,22 @@ class prediction:
 
             if self.prediction_type in ['cot', 'tot', 'react']:
                 match = re.search(r'<classification:\s*(.*?)>', prediction_content)
-                prediction_content = match.group(1)
+                try:
+                    if match is not None and match.group(1) != "":
+                        prediction_content = match.group(1)
+                    else:
+                        # Attempt to split using "classification"
+                        try:
+                            prediction_content = prediction_content.split("classification")[1]
+                        except IndexError:
+                            # If the split fails, try splitting with "Classification"
+                            prediction_content = prediction_content.split("Classification")[1]
+                except AttributeError:
+                    # Handle the case where match is None
+                    try:
+                        prediction_content = prediction_content.split("classification")[1]
+                    except IndexError:
+                        prediction_content = prediction_content.split("Classification")[1]
 
             with open(self.write_file_path, mode='a', newline='') as file:
                 writer = csv.writer(file)

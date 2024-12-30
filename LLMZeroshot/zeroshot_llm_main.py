@@ -35,11 +35,11 @@ def sample_test_indexes(test_indexes, labels, sample_ratio):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="cora")
+    parser.add_argument("--dataset", type=str, default="instagram")
     # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o  mistral-7b
     parser.add_argument("--model_name", type=str, default="mistral-7b")
     parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--prediction_type", type=str, default="none")
+    parser.add_argument("--prediction_type", type=str, default="tot")
 
     args = parser.parse_args()
     seed = set_seed(0)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
     has_inferenced_index = []
     if os.path.exists(file_path):
         for line in csv.reader(open(file_path, 'r')):
-            if len(line) == 3 and (line[0][0] >= '0' and line[0][0] <= '9'):
+            if len(line) >= 4 and (line[0][0] >= '0' and line[0][0] <= '9'):
                 has_inferenced_index.append(eval(line[0]))
         print(f"{file_path} already exists with {len(has_inferenced_index)} cases have been inferenced!")
 

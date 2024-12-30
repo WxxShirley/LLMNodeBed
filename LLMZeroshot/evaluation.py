@@ -91,6 +91,12 @@ def check_correct(dataset, row):
         new_labels = [item[:-6] for item in false_labels]
         false_labels.extend(new_labels)
 
+        # lower case
+        true_labels.append(row[2].lower())
+        true_labels.append(true_labels[1].lower())
+        new_labels = [item.lower() for item in false_labels]
+        false_labels.extend(new_labels)
+
     true_labels_in_completion = [x in row[1] for x in true_labels]
     false_label_in_completion = [x in row[1] for x in false_labels]
 
@@ -189,7 +195,7 @@ def evaluate(file_path, model_name, dataset):
                                     predict_labels.append(item)
 
                     elif dataset == "reddit" or dataset == "instagram":
-                        if item[:-1] in row[1] or item in row[1] or item[:-6] in row[1]:
+                        if item[:-1] in row[1] or item in row[1] or item[:-6] in row[1] or item[:-1].lower() in row[1] or item.lower() in row[1] or item[:-6].lower() in row[1]:
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
