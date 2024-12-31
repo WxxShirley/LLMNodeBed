@@ -21,6 +21,7 @@ class TextGraphGroundDataset(Dataset):
         return self.num_nodes
     
     def __getitem__(self, idx):
+        # TODO: fix error in citeseer
         sampled_neighbors = [np.random.choice(self.edge_dict[idx], replace=True) for _ in range(self.num_sampled_neighbors)]
         neighbor_texts = [self.graph_data.raw_texts[neigh_id] for neigh_id in sampled_neighbors]
         return {
@@ -64,6 +65,8 @@ class GraphMatchingDataset(Dataset):
         for node in range(self.num_nodes):
             neighbors, _, _, _ = k_hop_subgraph(node, num_hops=self.k_hop, edge_index=self.graph_data.edge_index)
             neighbors = neighbors.numpy()
+            if len(neighbors.tolist()) == 0:
+                continue
             
             for _ in range(self.sample_times):
                 subset = np.random.choice(neighbors, size=self.num_sampled_neighbors).tolist()
@@ -99,7 +102,11 @@ class GraphMatchingDataset(Dataset):
                     cur_query = self.query_template.replace("{{user_profiles}}", query_graph_texts)
                     cur_response = ". ".join([f"Graph token {k} corresponds to user {tokenid2text_mapping[k]}" for k in sorted(tokenid2text_mapping.keys()) ])
                     cur_response = "Based on the given graph tokens and the descriptions of users, we obtain the matching of graph tokens and users as follows: " + cur_response
-                
+                elif self.graph_type == "ecommerce_network":
+                    cur_query = self.query_template.replace("{{item_comments}}", query_graph_texts)
+                    cur_response = ". ".join([f"Graph token {k} corresponds to item {tokenid2text_mapping[k]}" for k in sorted(tokenid2text_mapping.keys())])
+                    cur_response = "Based on the given graph tokens and the comments of items, we obtain the matching of graph tokens and items as follows: " + cur_response
+
                 sample = {
                     "id": node,
                     "nodes": torch.LongTensor(subset),
