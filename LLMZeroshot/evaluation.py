@@ -106,9 +106,9 @@ def check_correct(dataset, row):
     if any(true_labels_in_completion) and not any(false_label_in_completion):
         return "correct"
     elif any(true_labels_in_completion) and any(false_label_in_completion):
-        if dataset == "photo" and row[1] == row[2] and row[2] == "Video Surveillance":
+        if dataset == "photo" and "Video Surveillance" in row[1] and row[2] == "Video Surveillance":
             return "correct"
-        elif dataset == "photo" and row[2] == "Video" and row[1] == "Video Surveillance":
+        elif dataset == "photo" and row[2] == "Video" and "Video Surveillance" in row[1]:
             return "wrong"
         return "uncertain"
     elif any(false_label_in_completion):
