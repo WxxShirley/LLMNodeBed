@@ -150,8 +150,31 @@ def num_tokens(file_path, dataset):
     return num_token / num_item
 
 
-def evaluate(file_path, model_name, dataset):
+def rewrite_output(file_path):
+    # Read the existing rows
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        rows = list(reader)  # Store rows in memory for modification
+
+    # Modify the rows as needed
+    for row in rows:
+        if row and (row[0][0] < '0' or row[0][0] > '9'):
+            continue
+        if len(row) > 1:  # Ensure there is a second column
+            row[1] = row[1].split('.')[0]  # Modify row[1]
+
+    # Write the modified rows back to the file
+    with open(file_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(rows)
+
+
+def evaluate(file_path, model_name, dataset, prediction_type):
     test = 0
+
+    if model_name == "mistral-7b" and prediction_type in ['none', 'lm', 'gnn', 'llm']:
+        rewrite_output(file_path)
+
     write_correctness(file_path, dataset)
     true_labels, predict_labels = [], []
     total_num = 0
@@ -175,7 +198,9 @@ def evaluate(file_path, model_name, dataset):
 
                     if dataset == "cora":
                         if item.replace('_', ' ') in row[1] or item.lower() in row[1] or item in row[1] or item.replace(
-                                '_', '-') in row[1] or item.replace('_', ' ').lower() in row[1]:
+                                '_', '-') in row[1] or item.replace('_', ' ').lower() in row[1] or item.replace('_',
+                                                                                                                '-').lower() in \
+                                row[1]:
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
@@ -195,7 +220,8 @@ def evaluate(file_path, model_name, dataset):
                                     predict_labels.append(item)
 
                     elif dataset == "reddit" or dataset == "instagram":
-                        if item[:-1] in row[1] or item in row[1] or item[:-6] in row[1] or item[:-1].lower() in row[1] or item.lower() in row[1] or item[:-6].lower() in row[1]:
+                        if item[:-1] in row[1] or item in row[1] or item[:-6] in row[1] or item[:-1].lower() in row[
+                            1] or item.lower() in row[1] or item[:-6].lower() in row[1]:
                             found += 1
                             if found <= 1:
                                 predict_labels.append(item)
