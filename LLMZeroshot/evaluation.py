@@ -255,8 +255,7 @@ def evaluate(file_path, model_name, dataset, prediction_type):
     hallucination_rate = hallucination / total_num * 100
     accuracy, macro_f1, weighted_f1 = compute_acc_and_f1(predict_labels, true_labels)
     num_token = num_tokens(file_path, dataset)
-    print(
-        f'Accuracy: {accuracy:.3f}, F1 Score: {macro_f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}, avg tokens:{num_token:.3f}')
+    print(f'Accuracy: {accuracy:.3f}, F1 Score: {macro_f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}, avg tokens:{num_token:.3f}')
 
     with open(file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
