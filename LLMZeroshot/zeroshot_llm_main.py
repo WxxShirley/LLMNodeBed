@@ -38,11 +38,12 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="instagram")
     # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o  mistral-7b
     parser.add_argument("--model_name", type=str, default="mistral-7b")
-    parser.add_argument("--device", type=str, default="cuda:0")
-    parser.add_argument("--prediction_type", type=str, default="tot")
+    parser.add_argument("--device", type=str, default="cuda:1")
+    parser.add_argument("--prediction_type", type=str, default="llm")
+    parser.add_argument("--set_seed", type=int, default=0)
 
     args = parser.parse_args()
-    seed = set_seed(0)
+    seed = set_seed(args.set_seed)
 
     # Get the index set of the training set on given dataset
     device = torch.device(args.device)
@@ -90,4 +91,4 @@ if __name__ == "__main__":
             print(f"[ERROR] {index} encounter error {e}")
 
     # Calculate acc and f1
-    evaluate(file_path, args.model_name, args.dataset)
+    evaluate(file_path, args.model_name, args.dataset, args.prediction_type)
