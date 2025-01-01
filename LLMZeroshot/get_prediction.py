@@ -1,308 +1,266 @@
-from openai import OpenAI
-from openai import AzureOpenAI
-import ast
 import csv
 import sys
-from http import HTTPStatus
-import dashscope
-from dashscope import Generation
-import tiktoken
-import re
-import requests
-import json
-
 
 sys.path.append("../")
-from common import DIRECT_PROMPTS, LM_NEIGHBOR_PROMPTS, LLM_NEIGHBOR_PROMPTS, GNN_NEIGHBOR_PROMPTS, COT_PROMPTS, \
-    TOT_PROMPTS, REACT_PROMPTS
 from common import load_graph_dataset, compute_acc_and_f1
-from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES
+
+labels = {
+    "cora": [
+        'Rule_Learning', 'Neural_Networks', 'Case_Based', 'Genetic_Algorithms', 'Theory', 'Reinforcement_Learning',
+        'Probabilistic_Methods'
+    ],
+    "pubmed": [
+        'Experimental', 'Diabetes Mellitus Type 1', 'Diabetes Mellitus Type 2'
+    ],
+    "citeseer": [
+        'Agents', 'ML (Machine Learning)', 'IR (Information Retrieval)', 'DB (Databases)',
+        'HCI (Human-Computer Interaction)', 'AI (Artificial Intelligence)'
+    ],
+    "wikics": [
+        'Computational Linguistics', 'Databases', 'Operating Systems', 'Computer Architecture', 'Computer Security',
+        'Internet Protocols', 'Computer File Systems', 'Distributed Computing Architecture', 'Web Technology',
+        'Programming Language Topics'
+    ],
+    "instagram": [
+        'Normal Users', 'Commercial Users'
+    ],
+    "reddit": [
+        'Normal Users', 'Popular Users'
+    ],
+    "photo": [
+        "Video Surveillance", "Accessories", "Binoculars & Scopes", "Video", "Lighting & Studio", "Bags & Cases",
+        "Tripods & Monopods", "Flashes", "Digital Cameras", "Film Photography", "Lenses", "Underwater Photography"
+    ]
+}
 
 
-class prediction:
+def check_correct(dataset, row):
+    true_labels = []
+    true_labels.append(row[2])
 
-    def __init__(self, prediction_type, dataset, model_name, index, write_file_path, graph_data):
-        allowed_types = {'none', 'cot', 'tot', 'react', 'lm', 'gnn', 'llm', 'summary'}
+    false_labels = labels[dataset].copy()
+    false_labels.remove(row[2])
 
-        if prediction_type not in allowed_types:
-            raise ValueError(f"Invalid prediction_type: {prediction_type}. ")
+    if dataset == "cora":
+        # '_' ->' '
+        true_labels.append(row[2].replace('_', ' '))
+        new_labels = [item.replace('_', ' ') for item in false_labels]
+        false_labels.extend(new_labels)
 
-        self.prediction_type = prediction_type
-        self.dataset = dataset
-        self.model_name = model_name
-        self.index = index
-        self.write_file_path = write_file_path
-        self.graph_data = graph_data
+        # '_' ->'-'
+        true_labels.append(row[2].replace('_', '-'))
+        new_labels = [item.replace('_', '-') for item in false_labels]
+        false_labels.extend(new_labels)
 
-    def prompt(self):
-        # calculate tokens
-        enc = tiktoken.get_encoding("o200k_base")
+        # lower case
+        true_labels.append(row[2].lower())
+        true_labels.append(true_labels[1].lower())
+        new_labels = [item.lower() for item in false_labels]
+        false_labels.extend(new_labels)
 
-        node_discription = "Given the information of the node: " + self.graph_data.raw_texts[self.index]
-        # get 1-ego neighbor info
-        one_neighbor_list = []
-        one_neighbor_file_path = f"../datasets/1-neighbors/{self.dataset}.csv"
+    elif dataset == "photo":
+        # lower case
+        true_labels.append(row[2].lower())
+        true_labels.append(true_labels[1].lower())
+        new_labels = [item.lower() for item in false_labels]
+        false_labels.extend(new_labels)
 
-        with open(one_neighbor_file_path, 'r') as file:
-            reader = csv.reader(file)
-            for row in reader:
-                if int(row[0]) == self.index:
-                    one_neighbor_list = ast.literal_eval(row[1])
+    elif dataset == "citeseer":
+        # content inside ()
+        if row[2] != "Agents":
+            true_labels.append(row[2].split('(')[1].replace(')', ''))
 
-        one_neighbor_list_restrict = one_neighbor_list[:5]
+        new_labels = false_labels.copy()
+        for item in new_labels:
+            if item != "Agents":
+                false_labels.append(item.split('(')[1].replace(')', ''))
 
-        one_neighbor_info_list = []
-        for iter in one_neighbor_list_restrict:
-            one_neighbor_info_list.append(self.graph_data.raw_texts[iter])
-        neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(one_neighbor_info_list)
+                # acronym
+        true_labels.append(row[2].split(' (')[0])
+        new_labels = [item.split(' (')[0] for item in false_labels]
+        false_labels.extend(new_labels)
 
-        if self.prediction_type == "none":
-            question = DIRECT_PROMPTS[self.dataset]
-            prompt_content = f"{node_discription}\n{question}"
+    elif dataset == "reddit" or dataset == "instagram":
+        # delete "s"
+        true_labels.append(row[2][:-1])
+        new_labels = [item[:-1] for item in false_labels]
+        false_labels.extend(new_labels)
 
-        elif self.prediction_type == "cot":
-            question = COT_PROMPTS[self.dataset]
-            prompt_content = f"{node_discription}\n{question}"
+        # no "Users"
+        true_labels.append(row[2][:-6])
+        new_labels = [item[:-6] for item in false_labels]
+        false_labels.extend(new_labels)
 
-        elif self.prediction_type == "tot":
-            question = TOT_PROMPTS[self.dataset]
-            prompt_content = f"{node_discription}\n{question}"
+        # lower case
+        true_labels.append(row[2].lower())
+        true_labels.append(true_labels[1].lower())
+        new_labels = [item.lower() for item in false_labels]
+        false_labels.extend(new_labels)
 
-        elif self.prediction_type == "react":
-            question = REACT_PROMPTS[self.dataset]
-            prompt_content = f"{node_discription}\n{question}"
+    true_labels_in_completion = [x in row[1] for x in true_labels]
+    false_label_in_completion = [x in row[1] for x in false_labels]
 
-        elif self.prediction_type == "lm":
-            k_1_neighbor_list = []
-            k_1_neighbor_file_path = f"../datasets/k-1-neighbors/{self.dataset}.csv"
+    if "none" in row[1] or "None" in row[1]:
+        return "uncertain"
 
-            with open(k_1_neighbor_file_path, 'r') as file:
-                reader = csv.reader(file)
-                for row in reader:
-                    if int(row[0]) == self.index:
-                        k_1_neighbor_list = ast.literal_eval(row[1])
-            if len(k_1_neighbor_list) == 0:
-                k_1_neighbor_list = one_neighbor_list[:5]
-
-            print(k_1_neighbor_list)
-            k_1_neighbor_info_list = []
-            for iter in k_1_neighbor_list:
-                k_1_neighbor_info_list.append(self.graph_data.raw_texts[iter])
-            k_1_neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(k_1_neighbor_info_list)
-
-            question = LM_NEIGHBOR_PROMPTS[self.dataset]
-            prompt_content = f"{node_discription}\n{k_1_neighbor_info}\n{question}"
-
-        elif self.prediction_type == "gnn":
-            k_1_neighbor_list = []
-            k_1_neighbor_file_path = f"../datasets/gnn-neighbors/{self.dataset}.csv"
-
-            with open(k_1_neighbor_file_path, 'r') as file:
-                reader = csv.reader(file)
-                for row in reader:
-                    if int(row[0]) == self.index:
-                        k_1_neighbor_list = ast.literal_eval(row[1])
-            if len(k_1_neighbor_list) == 0:
-                k_1_neighbor_list = one_neighbor_list[:5]
-
-            print(k_1_neighbor_list)
-            k_1_neighbor_info_list = []
-            for iter in k_1_neighbor_list:
-                k_1_neighbor_info_list.append(self.graph_data.raw_texts[iter])
-            k_1_neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(k_1_neighbor_info_list)
-
-            question = GNN_NEIGHBOR_PROMPTS[self.dataset]
-            prompt_content = f"{node_discription}\n{k_1_neighbor_info}\n{question}"
-
-        elif self.prediction_type == "summary":
-            if self.dataset in ["cora", "citeseer", "arxiv", "wikics"]:
-                data_type = "paper"
-                link_type = "citation"
-            elif self.dataset in ["instagram", "reddit"]:
-                data_type = "user"
-                link_type = "following"
-            else:
-                data_type = "item"
-                link_type = "co-purchase"
-            discription = f"The following list records some {data_type} related to the current one, with relationship being {link_type}."
-            question = f"Please summarize the information above with a short paragraph, find some common points which can reflect the category of this {data_type}."
-            prompt_content = f"{discription}\n{neighbor_info}\n{question}"
-
-        else:
-            summary_prediction = prediction("summary", self.dataset, self.model_name, self.index, self.write_file_path,
-                                            self.graph_data)
-            summary, summary_token_len = summary_prediction.get_response()
-            question = LLM_NEIGHBOR_PROMPTS[self.dataset]
-            prompt_content = f"{node_discription}\n{summary}\n{question}"
-
-        if self.prediction_type != "llm":
-            input_tokens = enc.encode(prompt_content)
-            input_tokens_len = len(input_tokens)
-        else:
-            input_tokens = enc.encode(prompt_content)
-            input_tokens_len = summary_token_len + len(input_tokens)
-
-        return prompt_content, input_tokens_len
-
-    def get_response(self):
-
-        enc = tiktoken.get_encoding("o200k_base")
-        prompt_content, input_tokens_len = self.prompt()
-
-        if self.model_name == "chatglm3-6b":
-            dashscope.api_key = API_KEYS[self.model_name]
-            messages = [
-                {
-                    'role': 'user',
-                    'content': f"{prompt_content}"
-                }]
-
-            gen = Generation()
-            response = gen.call(
-                'chatglm3-6b',
-                messages=messages,
-                result_format='message',  # set the result is message format.
-            )
-            prediction = response["output"]["choices"][0]["message"]["content"].replace('\n', '').strip()
+    if any(true_labels_in_completion) and not any(false_label_in_completion):
+        return "correct"
+    elif any(true_labels_in_completion) and any(false_label_in_completion):
+        if dataset == "photo" and "Video Surveillance" in row[1] and row[2] == "Video Surveillance":
+            return "correct"
+        elif dataset == "photo" and row[2] == "Video" and "Video Surveillance" in row[1]:
+            return "wrong"
+        return "uncertain"
+    elif any(false_label_in_completion):
+        return "wrong"
+    else:
+        return "hallucination"
 
 
-        elif self.model_name == "deepseek-chat":
-            client = OpenAI(
-                api_key=API_KEYS[self.model_name],
-                base_url="https://api.deepseek.com")
-            response = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {
-                        'role': 'user',
-                        'content': f"{prompt_content}"
-                    }
-                ],
-                stream=False
-            )
-            prediction = response.choices[0].message.content
+def write_correctness(file_path, dataset):
+    with open(file_path, mode='r', newline='') as file:
+        reader = csv.reader(file)
+        rows = list(reader)
+
+    for row in rows:
+        if row[0][0] < '0' or row[0][0] > '9':
+            continue
+        check_result = check_correct(dataset, row)
+        try:
+            row[4] = check_result
+        except IndexError:
+            row.append(check_result)
+
+    with open(file_path, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(rows)
 
 
-        elif self.model_name == "gpt-4" or self.model_name == "gpt-4o":
-            if self.model_name == "gpt-4o":
-                current_llm = GPT4o_RESOURCES
-            else:
-                current_llm = GPT4_RESOURCE
+def num_tokens(file_path, dataset):
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        num_token = 0
+        num_item = 0
+        for row in reader:
+            if row[0][0] < '0' or row[0][0] > '9':
+                continue
+            num_token = num_token + int(row[3])
+            num_item = num_item + 1
 
-            kvs = current_llm["pairs"][3]
-            client = AzureOpenAI(
-                azure_endpoint=kvs["endpoint"],
-                api_key=kvs["key"],
-                api_version=current_llm["version"],
-            )
-
-            response = client.chat.completions.create(
-                model=current_llm["model"],
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant"},
-                    {"role": "user", "content": prompt_content},
-                ]
-            )
-            prediction = response.choices[0].message.content
+    return num_token / num_item
 
 
-        elif self.model_name == "mistral-7b":
-            headers = {
-                "Content-Type": 'application/json',
-            }
-            url = f"http://127.0.0.1:8008/v1/chat/completions"
+def rewrite_output(file_path):
+    # Read the existing rows
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        rows = list(reader)  # Store rows in memory for modification
 
-            prompt = prompt_content
-            payload = json.dumps({
-                "model": "Mistral-7B-Instruct-v0.2",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "temperature": 0.2,
-                "top_p": 0.1,
-                "frequency_penalty": 0,
-                "presence_penalty": 1.05,
-                "max_tokens": 4096,
-                "stream": False,
-                "stop": None
-            })
-            response = requests.post(url, headers=headers, data=payload, timeout=300)
-            try:
-                resp = response.json()
-                msg = resp["choices"][0]["message"]["content"]
-                print(msg)
-                prediction = msg
-            except Exception as e:
-                print("Decode Error")
+    # Modify the rows as needed
+    for row in rows:
+        if row and (row[0][0] < '0' or row[0][0] > '9'):
+            continue
+        if len(row) > 1:  # Ensure there is a second column
+            row[1] = row[1].split('.')[0]  # Modify row[1]
+
+    # Write the modified rows back to the file
+    with open(file_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows(rows)
 
 
-        else:
-            client = OpenAI(
-                api_key=API_KEYS[self.model_name],
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            )
-            completion = client.chat.completions.create(
-                model=self.model_name,
-                messages=[
-                    {
-                        'role': 'user',
-                        'content': f"{prompt_content}"
-                    }
-                ]
-            )
-            prediction = completion.choices[0].message.content
+def evaluate(file_path, model_name, dataset, prediction_type):
+    test = 0
 
-        if self.prediction_type == "summary":
-            print(prediction)
+    # only extract output before the first "."
+    if model_name == "mistral-7b" and prediction_type in ['none', 'lm', 'gnn', 'llm']:
+        rewrite_output(file_path)
 
-        output_tokens = enc.encode(prediction)
-        all_length = len(output_tokens) + input_tokens_len
-        return prediction, all_length
+    write_correctness(file_path, dataset)
+    true_labels, predict_labels = [], []
+    total_num = 0
+    hallucination = 0
 
-    def write_in_file(self):
+    with open(file_path, 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            if row[0][0] < '0' or row[0][0] > '9':
+                continue
 
-        prediction_content, all_token_len = self.get_response()
+            total_num += 1
+            if row[4] == "correct":
+                true_labels.append(row[2])
+                predict_labels.append(row[2])
 
-        if self.prediction_type == "summary":
-            print(prediction_content)
+            elif row[4] == "wrong":
+                found = 0
+                true_labels.append(row[2])
+                for item in labels[dataset]:
 
-        else:
-            true_label = self.graph_data.label_name[self.graph_data.y[self.index]]
+                    if dataset == "cora":
+                        if item.replace('_', ' ') in row[1] or item.lower() in row[1] or item in row[1] or item.replace(
+                                '_', '-') in row[1] or item.replace('_', ' ').lower() in row[1] or item.replace('_',
+                                                                                                                '-').lower() in \
+                                row[1]:
+                            found += 1
+                            if found <= 1:
+                                predict_labels.append(item)
 
-            if self.prediction_type in ['cot', 'tot', 'react']:
-                match = re.search(r'<classification:\s*(.*?)>', prediction_content)
-                try:
-                    if match is not None and match.group(1) != "":
-                        prediction_content = match.group(1)
+                    elif dataset == "citeseer":
+
+                        if item == "Agents":
+                            if item in row[1]:
+                                found += 1
+                                if found <= 1:
+                                    predict_labels.append(item)
+                        else:
+                            if item.split('(')[1].replace(')', '') in row[1] or item.split(' (')[0] in row[1] or item in \
+                                    row[1]:
+                                found += 1
+                                if found <= 1:
+                                    predict_labels.append(item)
+
+                    elif dataset == "reddit" or dataset == "instagram":
+                        if item[:-1] in row[1] or item in row[1] or item[:-6] in row[1] or item[:-1].lower() in row[
+                            1] or item.lower() in row[1] or item[:-6].lower() in row[1]:
+                            found += 1
+                            if found <= 1:
+                                predict_labels.append(item)
+
+                    elif dataset == "photo":
+                        if item == "Video":
+                            if (item in row[1] or item.lower() in row[1]) and "Video Surveillance" not in row[1]:
+                                found += 1
+                                if found <= 1:
+                                    predict_labels.append(item)
+                        else:
+                            if item in row[1] or item.lower() in row[1]:
+                                found += 1
+                                if found <= 1:
+                                    predict_labels.append(item)
+
                     else:
-                        # Attempt to split using "classification"
-                        try:
-                            prediction_content = prediction_content.split("classification")[1]
-                        except IndexError:
-                            # If the split fails, try splitting with "Classification"
-                            prediction_content = prediction_content.split("Classification")[1]
-                except AttributeError:
-                    # Handle the case where match is None
-                    try:
-                        prediction_content = prediction_content.split("classification")[1]
-                    except IndexError:
-                        prediction_content = prediction_content.split("Classification")[1]
+                        if item in row[1]:
+                            found += 1
+                            if found <= 1:
+                                predict_labels.append(item)
 
-            with open(self.write_file_path, mode='a', newline='') as file:
-                writer = csv.writer(file)
-                if self.dataset == "arxiv":
-                    writer.writerow([self.index, prediction_content[:11], true_label, all_token_len])
-                else:
-                    writer.writerow([self.index, prediction_content, true_label, all_token_len])
-                print([self.index, prediction_content, true_label, all_token_len])
+            else:
+                hallucination += 1
 
+            if len(predict_labels) != len(true_labels):
+                test = test + 1
+                if test <= 1:
+                    print(row[0], row[1], row[2], len(predict_labels), len(true_labels), true_labels[-1])
 
+    hallucination_rate = hallucination / total_num * 100
+    accuracy, macro_f1, weighted_f1 = compute_acc_and_f1(predict_labels, true_labels)
+    num_token = num_tokens(file_path, dataset)
+    print(
+        f'Accuracy: {accuracy:.3f}, F1 Score: {macro_f1:.3f}, Hallucination Rate: {hallucination_rate:.3f}, avg tokens:{num_token:.3f}')
 
-
-
-
-
-
+    with open(file_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(
+            [f'Accuracy: {accuracy:.3f}', f'F1 Score: {macro_f1:.3f}', f'Hallucination Rate: {hallucination_rate:.3f}',
+             f'avg tokens:{num_token:.3f}'])
