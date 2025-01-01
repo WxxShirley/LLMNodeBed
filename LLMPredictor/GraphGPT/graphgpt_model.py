@@ -24,7 +24,7 @@ class GraphGPTModel(torch.nn.Module):
         self.tokenizer.padding_side = 'left'
         
         kwargs = {
-            "max_memory": {0: "80GiB", 1: "80GiB"},
+            "max_memory": {0: "80GiB"},
             "device_map": "auto"
         }
         model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16, **kwargs)

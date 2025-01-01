@@ -30,7 +30,7 @@ if __name__ == "__main__":
     parser.add_argument("--s1_max_txt_length", type=int, default=512)
     parser.add_argument("--s1_max_ans_length", type=int, default=256)
     parser.add_argument("--s1_epoch", type=int, default=2)
-    parser.add_argument("--s1_batch_size", type=int, default=2)
+    parser.add_argument("--s1_batch_size", type=int, default=16)
     parser.add_argument("--s1_lr", type=float, default=1e-4)
 
     parser.add_argument("--do_stage2", type=int, default=1)
@@ -66,14 +66,19 @@ if __name__ == "__main__":
         assert os.path.exists(f"{args.output_dir}/ground_emb/{args.dataset}.pt"), "Please run `main_text_graph_grounding` to generate grounded embedding first!"
         graph_embedding = torch.load(f"{args.output_dir}/ground_emb/{args.dataset}.pt").to(device)
     
-    st_time = time.time()
+    st_time = time.time()   
     if args.do_stage1: 
         print("Preparing Stage 1 [Graph Matching] ...")
+        
         graph_type = {"cora": "academic_network", "citeseer": "academic_network", "pubmed": "academic_network", "wikics": "academic_network", "arxiv": "academic_network", "reddit": "social_network", "instagram": "social_network"}[args.dataset]
         dataset = GraphMatchingDataset(graph_data=graph_data, k_hop=args.s1_k_hop, num_sampled_neighbors=args.s1_num_neighbors, graph_type=graph_type)
         train_loader = DataLoader(dataset, batch_size=args.s1_batch_size, drop_last=True, shuffle=True)
         
         model = GraphGPTModel(args, llm_path, graph_embedding=graph_embedding, stage="matching")
+
+        if os.path.exists(f"{args.output_dir}/output/{args.dataset}/stage1_best.pth"):
+            model = reload_best_model(model, f"{args.output_dir}/output/{args.dataset}", config_str="stage1")
+            args.s1_epoch = 0
         
         params = [p for _, p in model.named_parameters() if p.requires_grad]
         optimizer = torch.optim.AdamW([{'params': params, 'lr': args.s1_lr, 'weight_decay': args.wd}])
@@ -100,7 +105,7 @@ if __name__ == "__main__":
                 optimizer.step() 
                 epoch_loss, accum_loss = epoch_loss + loss.item(), accum_loss + loss.item()
                 
-                if (step+1) % 4 == 0:
+                if (step+1) % 20 == 0:
                     lr = optimizer.param_groups[0]["lr"]
                     print(f"(Temporary) Step {step} in Epoch {epoch+1} Accum Loss {accum_loss:.4f}")
                     accum_loss = 0.0 
@@ -108,6 +113,7 @@ if __name__ == "__main__":
                 progress_bar.update(1)
             
             print(f"[TRAIN] Epoch {epoch+1}|{args.s1_epoch}: Train Loss (Epoch Mean): {epoch_loss / len(train_loader):.5f}")
+            save_checkpoint(model, args.s1_epoch, f"{args.output_dir}/output/{args.dataset}", config_str="stage1", is_best=True) 
         
         torch.cuda.empty_cache()
         torch.cuda.reset_max_memory_allocated()
@@ -131,7 +137,7 @@ if __name__ == "__main__":
         
         train_loader = DataLoader(train_dataset, batch_size=args.s2_batch_size, drop_last=False, pin_memory=True, shuffle=True)
         val_loader = DataLoader(val_dataset, batch_size=args.s2_batch_size*2, drop_last=False, pin_memory=True, shuffle=False)
-        test_loader = DataLoader(test_dataset, batch_size=args.s2_batch_size*2, drop_last=False, pin_memory=True, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=args.s2_batch_size*3, drop_last=False, pin_memory=True, shuffle=False)
         
         num_training_steps = args.s2_epoch * len(train_loader)
         progress_bar = tqdm(range(num_training_steps))
@@ -191,7 +197,7 @@ if __name__ == "__main__":
     
     os.makedirs(f"{args.output_dir}/prediction", exist_ok=True)
     re_split_str = '_s' if args.re_split else ''
-    path = f"{args.output_dir}/prediction/{args.dataset}_{args.llm}{re_split_str}_seed{args.seed}.json"
+    path = f"{args.output_dir}/prediction/{args.dataset}_{args.llm}{re_split_str}.json"
     print(f"\n[Prediction] Write predictions on {path} ...")
     progress_bar = tqdm(range(len(test_loader)))
     
@@ -223,6 +229,7 @@ if __name__ == "__main__":
     with open(f"{args.output_dir}/summary{'_semi' if not args.re_split else ''}.csv", 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow([args.dataset, args.llm, acc, macrof1, weightf1, args.re_split, args.seed,
+                         args.load_ground_embedding, args.do_stage1, args.s1_epoch,
                          f"Train Minutes-{train_secs/60:.3f}", f"Inference Seconds-{inference_secs:.2f}"])
     print(f"Accuracy {acc:.3f}  Macro F1-Score {macrof1:.3f}  Weight F1-Score {weightf1:.3f}")
     print('\n## Finishing Time:', get_cur_time(), flush=True)
