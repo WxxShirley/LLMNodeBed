@@ -22,3 +22,6 @@ __pycache__
 /common/apikey.py
 /LLMPredictor/test.py
 LLMZeroshot/test.py
+environment.py
+LLMZeroshot/ZeroGv2/logs/\['cora']/arxiv_citeseer_pubmed.txt
+LLMZeroshot/ZeroGv2/arxiv_index.pkl
