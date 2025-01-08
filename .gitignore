@@ -27,3 +27,4 @@ LLMZeroshot/ZeroGv2/logs/\['cora']/arxiv_citeseer_pubmed.txt
 LLMZeroshot/ZeroGv2/arxiv_index.pkl
 LLMZeroshot/ZeroGv2/logs/\['photo']/computer.txt
 LLMZeroshot/ZeroGv2/logs/\['photo']/computer.txt
+LLMZeroshot/ZeroGv2/sample_analysis.py
