@@ -1,8 +1,5 @@
 import csv
-
-from pyspark.sql.functions import length
 from sklearn.metrics import accuracy_score, f1_score
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import ast
