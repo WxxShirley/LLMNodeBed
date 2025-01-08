@@ -12,7 +12,7 @@ import logging
 import sys
 import torch
 import time
-sys.path.append("../../../../")
+sys.path.append("../../")
 from common import load_graph_dataset, load_graph_dataset_for_zerog, get_cur_time, set_seed, save_checkpoint
 
 
@@ -95,7 +95,7 @@ def build_args():
                         type=int, default=4, help="gradient accumulation steps")
     parser.add_argument("--k", type=int, default=2, help="k-hop subgraph")
     parser.add_argument("--max_node", type=int, default=100, help="max num of nodes in the k-hop subgraph")
-    parser.add_argument("--test_re_split", type=int, default=0)
+    parser.add_argument("--test_re_split", type=int, default=1)
 
     # Dataset settings
     parser.add_argument("--test_dataset", type=str, nargs='+',
@@ -124,6 +124,8 @@ def build_args():
 
 
 descriptions = {
+    "computer": "This dataset represents a subgraph of an e-commerce network focused on computer-related items. Each node corresponds to an item in the Computer category, with node features consisting of reviews for each item. Edges denote co-purchase or co-review relationships between items. The prediction task involves classifying each item into one of 10 sub-categories, including Computer Accessories & Peripherals, Tablet Accessories, Laptop Accessories, Computers & Tablets, Computer Components, Data Storage, Networking Products, Monitors, Servers, and Tablet Replacement Parts.",
+    "photo": "This dataset represents a subgraph of an e-commerce network focused on photo-related items. Each node denotes an item in the Photo category, with node features consisting of reviews for each item. Edges denote co-purchase or co-review relationships between items. The prediction task involves classifying each item into one of 12 sub-categories, including: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, and Underwater Photography",
     "cora": "The Cora dataset is a fundamental resource in the field of graph learning, particularly within the realm of machine learning research. It represents a network of scientific publications. There are 7 categories in Cora: Theory: This category covers theoretical aspects of machine learning and AI. Reinforcement Learning: This category includes research on reinforcement learning, a type of machine learning where an agent learns to make decisions to achieve a goal, focusing on algorithms, methodologies, and applications in decision-making areas. Genetic Algorithms: This category deals with genetic algorithms, a type of optimization algorithm inspired by natural evolution. Neural Networks: This category focuses on artificial neural networks, a subset of machine learning mimicking the human brain, covering various architectures, training techniques, and applications. Probabilistic Methods: This category pertains to research on probabilistic methods in machine learning, using probability mathematics to handle uncertainty and make predictions. Case Based: This category focuses on case-based reasoning in AI, a method that solves new problems by referring to similar past cases. Rule Learning: This category is about rule-based learning in machine learning, involving the generation of rules for decision-making systems, focusing on algorithms, transparency, and applications in fields requiring interpretability. The average degree of Cora is 4.",
     "citeseer": "The Citeseer dataset is a prominent academic resource in the field of computer science, categorizing publications into six distinct areas. These are Agents, focusing on intelligent agents; Machine Learning (ML), covering all aspects of learning techniques and applications; Information Retrieval (IR), dealing with data and text indexing and retrieval; Databases (DB), related to database management and data mining; Human-Computer Interaction (HCI), emphasizing computer technology interfaces for humans; and Artificial Intelligence (AI), a broad category encompassing general AI theory and applications, excluding certain subfields. The average degree of this graph is 2.",
     "pubmed": "The PubMed dataset comprises three categories: Experimental studies on diabetes mechanisms and therapies, Type 1 Diabetes research focusing on autoimmune processes and treatments, and Type 2 Diabetes studies emphasizing insulin resistance and management strategies. Each category addresses specific aspects of diabetes research, aiding in understanding and treating this complex disease. The average degree of this graph is 4.5.",
@@ -197,7 +199,7 @@ if __name__ == '__main__':
     for dataset_name in args.test_dataset:
         test_data = load_graph_dataset(dataset_name = dataset_name, device = args.device, re_split = args.test_re_split)
         test_data.label_text = test_data.label_name
-        dataset = DataWrapper(test_data, args)
+        dataset = DataWrapper(test_data, args, dataset_name)
         test_data = dataset
         test_datasets.append(test_data)
     
@@ -225,9 +227,9 @@ if __name__ == '__main__':
         subpath = "reddit_ins_subgraph.pt"
         if not os.path.exists(subpath):
             for dataset_name in args.train_dataset:
-                data =  load_graph_dataset(dataset_name=dataset_name, device=args.device, re_split=False)
+                data =  load_graph_dataset(dataset_name=dataset_name, device=args.device, re_split=True)
                 data.label_text = data.label_name
-                dataset = DataWrapper(data, args)
+                dataset = DataWrapper(data, args, dataset_name)
                 train_data = dataset
                 k_hop_dataset = kHopSubgraphDataset(
                 train_data.data, num_hops=args.k, max_nodes=args.max_node, dataset_name=dataset_name)
@@ -238,9 +240,9 @@ if __name__ == '__main__':
             concat_dataset = torch.load(subpath)
     else:
         for dataset_name in args.train_dataset:
-            data = load_graph_dataset(dataset_name=dataset_name, device=args.device, re_split=False)
+            data = load_graph_dataset(dataset_name=dataset_name, device=args.device, re_split=True)
             data.label_text = data.label_name
-            dataset = DataWrapper(data, args)
+            dataset = DataWrapper(data, args, dataset_name)
             data = dataset
             if dataset_name == "arxiv":
                 k_hop_dataset = kHopSubgraphDataset_Arxiv(
@@ -291,7 +293,7 @@ if __name__ == '__main__':
         res_list = []
         for idx, test_data in enumerate(test_datasets): 
             res, score_dict = eval(i, idx, model, test_data, args)
-            logger.info(f"[MODEL EVAL] Epoch {i + 1:03d} idx is {idx} {score_dict}")
+            logger.info(f"[MODEL EVAL] Epoch {i + 1:03d} {test_data.dataset_name} {score_dict}")
             res_list.append(res)
         logger.info("Epoch: {}, Step: {}, acc: {}".format(i, step, res_list))
 

@@ -23,12 +23,13 @@ import requests
 
 
 class DataWrapper:
-    def __init__(self, data, args):
+    def __init__(self, data, args, dataset_name):
         self._data = data
         self.args = args
         self.x = self._data.x
         self.raw_texts = self._data.raw_texts
         self.label_text = self._data.label_name
+        self.dataset_name = dataset_name
 
     @property
     def data(self):

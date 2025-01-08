@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, f1_score
 import torch.nn.functional as F
 from peft import LoraModel, LoraConfig
 from transformers import BertModel, BertTokenizer, RobertaTokenizer, RobertaModel, AutoTokenizer, AutoModel, AutoModelForMaskedLM,RobertaTokenizer, RobertaModel, T5Tokenizer, T5Model
-sys.path.append("../../../../")
+sys.path.append("../../")
 from common import MODEL_PATHs as encoder_dict
 from common import normalize_adj_matrix, compute_acc_and_f1, mean_pooling_llm
 
@@ -58,6 +58,8 @@ class Text_Lora(nn.Module):
         )
         self.lora_model = LoraModel(self.textmodel, self.config, "default")
         self.descriptions = {
+            "computer": "This dataset represents a subgraph of an e-commerce network focused on computer-related items. Each node corresponds to an item in the Computer category, with node features consisting of reviews for each item. Edges denote co-purchase or co-review relationships between items. The prediction task involves classifying each item into one of 10 sub-categories, including Computer Accessories & Peripherals, Tablet Accessories, Laptop Accessories, Computers & Tablets, Computer Components, Data Storage, Networking Products, Monitors, Servers, and Tablet Replacement Parts.",
+            "photo": "This dataset represents a subgraph of an e-commerce network focused on photo-related items. Each node denotes an item in the Photo category, with node features consisting of reviews for each item. Edges denote co-purchase or co-review relationships between items. The prediction task involves classifying each item into one of 12 sub-categories, including: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, and Underwater Photography",
             "cora": "The Cora dataset is a fundamental resource in the field of graph learning, particularly within the realm of machine learning research. It represents a network of scientific publications. There are 7 categories in Cora: Theory: This category covers theoretical aspects of machine learning and AI. Reinforcement Learning: This category includes research on reinforcement learning, a type of machine learning where an agent learns to make decisions to achieve a goal, focusing on algorithms, methodologies, and applications in decision-making areas. Genetic Algorithms: This category deals with genetic algorithms, a type of optimization algorithm inspired by natural evolution. Neural Networks: This category focuses on artificial neural networks, a subset of machine learning mimicking the human brain, covering various architectures, training techniques, and applications. Probabilistic Methods: This category pertains to research on probabilistic methods in machine learning, using probability mathematics to handle uncertainty and make predictions. Case Based: This category focuses on case-based reasoning in AI, a method that solves new problems by referring to similar past cases. Rule Learning: This category is about rule-based learning in machine learning, involving the generation of rules for decision-making systems, focusing on algorithms, transparency, and applications in fields requiring interpretability. The average degree of Cora is 4.",
             "citeseer": "The Citeseer dataset is a prominent academic resource in the field of computer science, categorizing publications into six distinct areas. These are Agents, focusing on intelligent agents; Machine Learning (ML), covering all aspects of learning techniques and applications; Information Retrieval (IR), dealing with data and text indexing and retrieval; Databases (DB), related to database management and data mining; Human-Computer Interaction (HCI), emphasizing computer technology interfaces for humans; and Artificial Intelligence (AI), a broad category encompassing general AI theory and applications, excluding certain subfields. The average degree of this graph is 2.",
             "pubmed": "The PubMed dataset comprises three categories: Experimental studies on diabetes mechanisms and therapies, Type 1 Diabetes research focusing on autoimmune processes and treatments, and Type 2 Diabetes studies emphasizing insulin resistance and management strategies. Each category addresses specific aspects of diabetes research, aiding in understanding and treating this complex disease. The average degree of this graph is 4.5.",
@@ -104,7 +106,7 @@ class Text_Lora(nn.Module):
         if data.dataset_name in ["citeseer", "arxiv"]:
             new_edges_to_virtual = [[node_idx, virtual_node_index]
                                     for node_idx in range(num_existing_nodes-1)]
-        elif data.dataset_name in ["cora", "pubmed", "wikics", "home", "tech","reddit","instagram"]:
+        elif data.dataset_name in ["cora", "pubmed", "wikics", "home", "tech","reddit","instagram","photo","computer"]:
             new_edges_to_virtual = []
             for node_idx in range(num_existing_nodes-1):
                 new_edges_to_virtual.append([node_idx, virtual_node_index])
@@ -140,7 +142,7 @@ class Text_Lora(nn.Module):
         if self.args.test_data in ["citesee"]:
             new_edges_to_virtual = [[node_idx, virtual_node_index]
                                     for node_idx in range(num_existing_nodes-1)]
-        elif self.args.test_data in ["cora", "pubmed", "citeseer", "arxiv", "wikics", "facebook", 'home', 'tech','reddit','instagram']:
+        elif self.args.test_data in ["cora", "pubmed", "citeseer", "arxiv", "wikics", "facebook", 'home', 'tech','reddit','instagram','computer','photo']:
             new_edges_to_virtual = []
             for node_idx in range(num_existing_nodes-1):
                 new_edges_to_virtual.append([node_idx, virtual_node_index])
