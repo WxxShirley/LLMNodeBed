@@ -33,13 +33,14 @@ def sample_test_indexes(test_indexes, labels, sample_ratio):
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="instagram")
-    # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o  mistral-7b
-    parser.add_argument("--model_name", type=str, default="mistral-7b")
-    parser.add_argument("--device", type=str, default="cuda:1")
-    parser.add_argument("--prediction_type", type=str, default="llm")
+    parser.add_argument("--dataset", type=str, default="cora")
+    # chatglm3-6b   deepseek-chat   qwen-turbo  gpt-4  gpt-4o  mistral-7b  llama-3.1-8b
+    parser.add_argument("--model_name", type=str, default="llama-3.1-8b")
+    parser.add_argument("--device", type=str, default="cuda:2")
+    parser.add_argument("--prediction_type", type=str, default="all_neighbor")
     parser.add_argument("--set_seed", type=int, default=0)
 
     args = parser.parse_args()
@@ -60,6 +61,8 @@ if __name__ == "__main__":
         zero_shot_predfolder = "../results/zero_shot/tot"
     elif args.prediction_type == "react":
         zero_shot_predfolder = "../results/zero_shot/react"
+    elif args.prediction_type == "all_neighbor":
+        zero_shot_predfolder = "../results/zero_shot/all_neighbor"
     elif args.prediction_type == "lm":
         zero_shot_predfolder = "../results/zero_shot/lm"
     elif args.prediction_type == "gnn":

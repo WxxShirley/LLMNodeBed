@@ -14,7 +14,7 @@ import json
 
 sys.path.append("../")
 from common import DIRECT_PROMPTS, LM_NEIGHBOR_PROMPTS, LLM_NEIGHBOR_PROMPTS, GNN_NEIGHBOR_PROMPTS, COT_PROMPTS, \
-    TOT_PROMPTS, REACT_PROMPTS
+    TOT_PROMPTS, REACT_PROMPTS, ALL_NEIGHBOR_PROMPTS
 from common import load_graph_dataset, compute_acc_and_f1
 from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES
 
@@ -22,7 +22,7 @@ from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES
 class prediction:
 
     def __init__(self, prediction_type, dataset, model_name, index, write_file_path, graph_data):
-        allowed_types = {'none', 'cot', 'tot', 'react', 'lm', 'gnn', 'llm', 'summary'}
+        allowed_types = {'none', 'cot', 'tot', 'react', 'lm', 'gnn', 'llm', 'summary', 'all_neighbor'}
 
         if prediction_type not in allowed_types:
             raise ValueError(f"Invalid prediction_type: {prediction_type}. ")
@@ -40,21 +40,23 @@ class prediction:
 
         node_discription = "Given the information of the node: " + self.graph_data.raw_texts[self.index]
         # get 1-ego neighbor info
-        one_neighbor_list = []
-        one_neighbor_file_path = f"../datasets/1-neighbors/{self.dataset}.csv"
+        if self.prediction_type in ['lm', 'gnn', 'llm', 'summary', 'all_neighbor']:
+            one_neighbor_list = []
+            one_neighbor_file_path = f"../datasets/1-neighbors/{self.dataset}.csv"
 
-        with open(one_neighbor_file_path, 'r') as file:
-            reader = csv.reader(file)
-            for row in reader:
-                if int(row[0]) == self.index:
-                    one_neighbor_list = ast.literal_eval(row[1])
+            with open(one_neighbor_file_path, 'r') as file:
+                reader = csv.reader(file)
+                for row in reader:
+                    if int(row[0]) == self.index:
+                        one_neighbor_list = ast.literal_eval(row[1])
 
-        one_neighbor_list_restrict = one_neighbor_list[:5]
+            # one_neighbor_list_restrict = one_neighbor_list[:5]
 
-        one_neighbor_info_list = []
-        for iter in one_neighbor_list_restrict:
-            one_neighbor_info_list.append(self.graph_data.raw_texts[iter])
-        neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(one_neighbor_info_list)
+            one_neighbor_info_list = []
+            for iter in one_neighbor_list:
+                one_neighbor_info_list.append(self.graph_data.raw_texts[iter])
+            neighbor_info = "\none of its neighbors' feature:" + "\none of its neighbors' feature:".join(one_neighbor_info_list)
+
 
         if self.prediction_type == "none":
             question = DIRECT_PROMPTS[self.dataset]
@@ -71,6 +73,10 @@ class prediction:
         elif self.prediction_type == "react":
             question = REACT_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{question}"
+        
+        elif self.prediction_type == "all_neighbor":
+            question = ALL_NEIGHBOR_PROMPTS[self.dataset]
+            prompt_content = f"{node_discription}\n{neighbor_info}\n{question}"
 
         elif self.prediction_type == "lm":
             k_1_neighbor_list = []
@@ -237,6 +243,35 @@ class prediction:
                 prediction = msg
             except Exception as e:
                 print("Decode Error")
+
+        
+        elif self.model_name == "llama-3.1-8b":
+            url = "http://127.0.0.1:8008/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+            }
+
+            messages = [
+                {"role": "user", "content": prompt_content},
+            ]
+
+            payload = json.dumps({
+                "model": "Meta-Llama-3.1-8B-Instruct",  
+                "messages": messages,
+                "max_tokens": 4096,
+                "stream": False,
+            })
+
+            response = requests.post(url, headers=headers, data=payload)
+
+            try:
+                resp = response.json()
+                generated_text = resp["choices"][0]["message"]["content"]
+                print(generated_text)
+                prediction = generated_text
+            except Exception as e:
+                print("Error decoding response:", e)
+
 
 
         else:
