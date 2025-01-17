@@ -16,7 +16,7 @@ sys.path.append("../")
 from common import DIRECT_PROMPTS, LM_NEIGHBOR_PROMPTS, LLM_NEIGHBOR_PROMPTS, GNN_NEIGHBOR_PROMPTS, COT_PROMPTS, \
     TOT_PROMPTS, REACT_PROMPTS, ALL_NEIGHBOR_PROMPTS
 from common import load_graph_dataset, compute_acc_and_f1
-from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES
+from common import API_KEYS, GPT4_RESOURCE, GPT4o_RESOURCES, CLASSES
 
 
 class prediction:
@@ -137,7 +137,8 @@ class prediction:
         else:
             summary_prediction = prediction("summary", self.dataset, self.model_name, self.index, self.write_file_path,
                                             self.graph_data)
-            summary, summary_token_len = summary_prediction.get_response()
+            prompt_content, input_tokens_len = summary_prediction.prompt()
+            summary, summary_token_len = summary_prediction.get_response(prompt_content, input_tokens_len)
             question = LLM_NEIGHBOR_PROMPTS[self.dataset]
             prompt_content = f"{node_discription}\n{summary}\n{question}"
 
@@ -150,10 +151,10 @@ class prediction:
 
         return prompt_content, input_tokens_len
 
-    def get_response(self):
+    def get_response(self, prompt_content, input_tokens_len):
 
         enc = tiktoken.get_encoding("o200k_base")
-        prompt_content, input_tokens_len = self.prompt()
+        # prompt_content, input_tokens_len = self.prompt()
 
         if self.model_name == "chatglm3-6b":
             dashscope.api_key = API_KEYS[self.model_name]
@@ -296,10 +297,17 @@ class prediction:
         output_tokens = enc.encode(prediction)
         all_length = len(output_tokens) + input_tokens_len
         return prediction, all_length
+    
+    def self_correction(self, before_prediction_content, before_tokens_len):
+        enc = tiktoken.get_encoding("o200k_base")
+        question = f"Given the content, what is the final classification answer? Here are the categories: {CLASSES[self.dataset]}. Only answer ONE category name."
+        prompt_content = f"{before_prediction_content}\n{question}"
+        input_tokens_len = before_tokens_len + len(enc.encode(prompt_content))
+        return self.get_response(prompt_content, input_tokens_len)
 
     def write_in_file(self):
-
-        prediction_content, all_token_len = self.get_response()
+        prompt_content, input_tokens_len = self.prompt()
+        prediction_content, all_token_len = self.get_response(prompt_content, input_tokens_len)
 
         if self.prediction_type == "summary":
             print(prediction_content)
@@ -318,13 +326,14 @@ class prediction:
                             prediction_content = prediction_content.split("classification")[1]
                         except IndexError:
                             # If the split fails, try splitting with "Classification"
-                            prediction_content = prediction_content.split("Classification")[1]
+                            try:
+                                prediction_content = prediction_content.split("Classification")[1]
+                            except IndexError:
+                                # If both splits fail, call self_correction
+                                prediction_content, all_token_len = self.self_correction(prediction_content, all_token_len)
                 except AttributeError:
                     # Handle the case where match is None
-                    try:
-                        prediction_content = prediction_content.split("classification")[1]
-                    except IndexError:
-                        prediction_content = prediction_content.split("Classification")[1]
+                    prediction_content, all_token_len = self.self_correction(prediction_content, all_token_len)
 
             with open(self.write_file_path, mode='a', newline='') as file:
                 writer = csv.writer(file)
