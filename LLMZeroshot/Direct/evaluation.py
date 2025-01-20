@@ -18,5 +18,5 @@ def simiple_evaluate(file_path, valid_label):
             gt_list.append(cur_gt)
         
         acc, macro_f1, _ = compute_acc_and_f1(pred_list, gt_list)
-        hallucination = round(hall_number / len(pred_list) * 100.0, 2)
+        hallucination = round(hall_number / (len(pred_list) + 1e-9) * 100.0, 2)
         return acc, macro_f1, hallucination
