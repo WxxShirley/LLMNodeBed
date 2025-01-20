@@ -1,3 +1,7 @@
+#############################################################################
+################### Explanation Prompt for TAPE #############################
+#############################################################################
+
 CORA_EXP = "Question: Which of the following sub-categories of AI does this paper belong to: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods? If multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, explain how it is present in the text.\n\nAnswer: "
 PUBMED_EXP = "Question: Which of the following topic does this scientific publication talk about? Here are the 3 categories: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2. Experimental category usually refers to Experimentally induced diabetes, Diabetes Mellitus Type 1 usually means the content of the paper is about Diabetes Mellitus Type 1, Diabetes Mellitus Type 2 usually means the content of the paper is about Diabetes Mellitus Type 2. Please give one or more answers of either Type 1 diabetes, Type 2 diabetes, or Experimentally induced diabetes; if multiple options apply, provide a comma-separated list ordered from most to least related, then for each choice you gave, give a detailed explanation with quotes from the text explaining why it is related to the chosen option.\n\nAnswer: "
 ARXIV_EXP = "Question: Which arXiv CS subcategory does this paper belong to? Give 5 likely arXiv CS sub-categories as a comma-separated list ordered from most to least likely, in the form 'arxiv cs xx', and provide your reasoning.\n\nAnswer: "
@@ -22,6 +26,10 @@ EXPLANATION_PROMPTS = {
     "history": HISTORY_EXP
 }
 
+
+#############################################################################
+################### LLM Direct Inference (Direct) ###########################
+#############################################################################
 
 CORA_DIRECT = """Question: Which of the following sub-categories of AI does this paper belong to? Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. Reply only one category that you think this paper might belong to. Only reply the category phrase without any other explanation words.\n\nAnswer: """
 PUBMED_DIRECT = """Question: Which of the following topic does this scientific publication talk about? Here are the 3 categories: Experimental, Diabetes Mellitus Type 1, Diabetes Mellitus Type 2. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
@@ -86,7 +94,6 @@ INSTAGRAM_DIRECT = """Question: Which of the following categories does this inst
 REDDIT_DIRECT = """Question: Which of the following categories does this reddit user belong to? Here are the 2 categories: Normal Users, Popular Users. Popular Users' posted content are often more attractive. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Popular Users, without any other words.\n\nAnswer: """
 PHOTO_DIRECT = "Which of the following categories does this photo item belong to? Here are the 12 categories: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography. Reply only one category that you think this item might belong to. Only reply the category name I give of the category without any other words.\n\nAnswer: """
 
-
 DIRECT_PROMPTS = {
     "cora": CORA_DIRECT,
     "pubmed": PUBMED_DIRECT,
@@ -99,6 +106,10 @@ DIRECT_PROMPTS = {
 }
 
 
+#############################################################################
+################### LLM Direct Inference (w. Neighbor) ######################
+#############################################################################
+
 CORA_ALL_NEIGHBOR = """Here I give you the content of the node itself and the information of its 1-hop neighbors. The relation between the node and its neighbors is 'citation'. Question: Based on these inforamtion, Which of the following sub-categories of AI does this paper(this node) belong to? Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
 CITESEER_ALL_NEIGHBOR = """Here I give you the content of the node itself and the information of its 1-hop neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following theme does this paper belong to? Here are the 6 categories: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence). Reply only one category that you think this paper might belong to. Only reply the category full name I give you without any other words.\n\nAnswer: """
 INSTAGRAM_ALL_NEIGHBOR = """Here I give you the content of the node itself and the information of its its 1-hop neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this instagram user belong to? Here are the 2 categories: Normal Users, Commercial Users. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Commercial Users, without any other words.\n\nAnswer: """
@@ -106,7 +117,6 @@ PUBMED_ALL_NEIGHBOR = """Here I give you the content of the node itself and the 
 WIKICS_ALL_NEIGHBOR = """Here I give you the content of the node itself and the information of its 1-hop neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following branch of Computer science does this Wikipedia-based dataset belong to? Here are the 10 categories: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics. Reply only one category that you think this paper might belong to. Only reply the category full name without any other words.\n\nAnswer: """
 REDDIT_ALL_NEIGHBOR = """Here I give you the content of the node itself and the information of its 1-hop neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this reddit user belong to? Here are the 2 categories: Normal Users, Popular Users. Popular Users' posted content are often more attractive. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Popular Users, without any other words.\n\nAnswer: """
 PHOTO_ALL_NEIGHBOR = "Here I give you the content of the node itself and the information of its 1-hop neighbors. The relation between the node and its neighbors is 'co-purchase'. Question: Which of the following type does this photo item belong to? Here are the 12 categories: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography. Reply only one category that you think this item might belong to. Only reply the category name I give without any other words.\n\nAnswer: """
-
 
 ALL_NEIGHBOR_PROMPTS = {
     "cora": CORA_ALL_NEIGHBOR,
@@ -119,6 +129,10 @@ ALL_NEIGHBOR_PROMPTS = {
 }
 
 
+#############################################################################
+################### LLM Direct Inference (LM Similar Nodes) #################
+#############################################################################
+
 CORA_LM_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance) of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Based on these inforamtion, Which of the following sub-categories of AI does this paper(this node) belong to? Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
 CITESEER_LM_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance) of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following theme does this paper belong to? Here are the 6 categories: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence). Reply only one category that you think this paper might belong to. Only reply the category full name I give you without any other words.\n\nAnswer: """
 INSTAGRAM_LM_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance) of its 1st-order neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this instagram user belong to? Here are the 2 categories: Normal Users, Commercial Users. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Commercial Users, without any other words.\n\nAnswer: """
@@ -126,7 +140,6 @@ PUBMED_LM_NEIGHBOR = """Here I give you the content of the node itself and the i
 WIKICS_LM_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance) of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following branch of Computer science does this Wikipedia-based dataset belong to? Here are the 10 categories: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics. Reply only one category that you think this paper might belong to. Only reply the category full name without any other words.\n\nAnswer: """
 REDDIT_LM_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance) of its 1st-order neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this reddit user belong to? Here are the 2 categories: Normal Users, Popular Users. Popular Users' posted content are often more attractive. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Popular Users, without any other words.\n\nAnswer: """
 PHOTO_LM_NEIGHBOR = "Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance) of its 1st-order neighbors. The relation between the node and its neighbors is 'co-purchase'. Question: Which of the following type does this photo item belong to? Here are the 12 categories: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography. Reply only one category that you think this item might belong to. Only reply the category name I give without any other words.\n\nAnswer: """
-
 
 LM_NEIGHBOR_PROMPTS = {
     "cora": CORA_LM_NEIGHBOR,
@@ -138,6 +151,11 @@ LM_NEIGHBOR_PROMPTS = {
     "photo": PHOTO_LM_NEIGHBOR,
 }
 
+
+#############################################################################
+################### LLM Direct Inference (GNN Similar Nodes) ################
+#############################################################################
+
 CORA_GNN_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance and structural information) of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Based on these inforamtion, Which of the following sub-categories of AI does this paper(this node) belong to? Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
 CITESEER_GNN_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance and structural information) of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following theme does this paper belong to? Here are the 6 categories: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence). Reply only one category that you think this paper might belong to. Only reply the category full name I give you without any other words.\n\nAnswer: """
 INSTAGRAM_GNN_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance and structural information) of its 1st-order neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this instagram user belong to? Here are the 2 categories: Normal Users, Commercial Users. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Commercial Users, without any other words.\n\nAnswer: """
@@ -145,7 +163,6 @@ PUBMED_GNN_NEIGHBOR = """Here I give you the content of the node itself and the 
 WIKICS_GNN_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance and structural information) of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following branch of Computer science does this Wikipedia-based dataset belong to? Here are the 10 categories: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics. Reply only one category that you think this paper might belong to. Only reply the category full name without any other words.\n\nAnswer: """
 REDDIT_GNN_NEIGHBOR = """Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance and structural information) of its 1st-order neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this reddit user belong to? Here are the 2 categories: Normal Users, Popular Users. Popular Users' posted content are often more attractive. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Popular Users, without any other words.\n\nAnswer: """
 PHOTO_GNN_NEIGHBOR = "Here I give you the content of the node itself and the information of its k-nearest neighbors (based on Euclidean Distance and structural information) of its 1st-order neighbors. The relation between the node and its neighbors is 'co-purchase'. Question: Which of the following type does this photo item belong to? Here are the 12 categories: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography. Reply only one category that you think this item might belong to. Only reply the category name I give without any other words.\n\nAnswer: """
-
 
 GNN_NEIGHBOR_PROMPTS = {
     "cora": CORA_GNN_NEIGHBOR,
@@ -157,6 +174,11 @@ GNN_NEIGHBOR_PROMPTS = {
     "photo": PHOTO_GNN_NEIGHBOR,
 }
 
+
+#############################################################################
+################### LLM Direct Inference (w. Summary) #######################
+#############################################################################
+
 CORA_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Based on these inforamtion, Which of the following sub-categories of AI does this paper(this node) belong to? Here are the 7 categories: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. Reply only one category that you think this paper might belong to. Only reply the category name without any other words.\n\nAnswer: """
 CITESEER_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following theme does this paper belong to? Here are the 6 categories: Agents, ML (Machine Learning), IR (Information Retrieval), DB (Databases), HCI (Human-Computer Interaction), AI (Artificial Intelligence). Reply only one category that you think this paper might belong to. Only reply the category full name I give you without any other words.\n\nAnswer: """
 INSTAGRAM_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this instagram user belong to? Here are the 2 categories: Normal Users, Commercial Users. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Commercial Users, without any other words.\n\nAnswer: """
@@ -164,7 +186,6 @@ PUBMED_LLM_NEIGHBOR = """Here I give you the content of the node itself and the 
 WIKICS_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'citation'. Question: Which of the following branch of Computer science does this Wikipedia-based dataset belong to? Here are the 10 categories: Computational Linguistics, Databases, Operating Systems, Computer Architecture, Computer Security, Internet Protocols, Computer File Systems, Distributed Computing Architecture, Web Technology, Programming Language Topics. Reply only one category that you think this paper might belong to. Only reply the category full name without any other words.\n\nAnswer: """
 REDDIT_LLM_NEIGHBOR = """Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'following'. Question: Which of the following categories does this reddit user belong to? Here are the 2 categories: Normal Users, Popular Users. Popular Users' posted content are often more attractive. Reply only one category that you think this user might belong to. Only reply the category name I give of the category: Normal Users, Popular Users, without any other words.\n\nAnswer: """
 PHOTO_LLM_NEIGHBOR = "Here I give you the content of the node itself and the summary information of its 1st-order neighbors. The relation between the node and its neighbors is 'co-purchase'. Question: Which of the following type does this photo item belong to? Here are the 12 categories: Video Surveillance, Accessories, Binoculars & Scopes, Video, Lighting & Studio, Bags & Cases, Tripods & Monopods, Flashes, Digital Cameras, Film Photography, Lenses, Underwater Photography. Reply only one category that you think this item might belong to. Only reply the category name I give without any other words.\n\nAnswer: """
-
 
 LLM_NEIGHBOR_PROMPTS = {
     "cora": CORA_LLM_NEIGHBOR,
@@ -175,6 +196,11 @@ LLM_NEIGHBOR_PROMPTS = {
     "reddit": REDDIT_LLM_NEIGHBOR,
     "photo": PHOTO_LLM_NEIGHBOR,
 }
+
+
+#############################################################################
+################### LLM Direct Inference (Chain of Thought) #################
+#############################################################################
 
 CORA_COT = """Here I give you the content of the node itself. 
 Question: Based on this information, which of the following sub-categories of AI does this paper (this node) belong to? 
@@ -243,11 +269,9 @@ COT_PROMPTS = {
 }
 
 
-
-
-
-
-
+#############################################################################
+################### LLM Direct Inference (Tree of Thought) ##################
+#############################################################################
 
 CORA_TOT = """Here I give you the content of the node itself. 
 Imagine three different experts are answering this question. 
@@ -336,6 +360,11 @@ TOT_PROMPTS = {
     "photo": PHOTO_TOT,
 }
 
+
+#############################################################################
+####################### LLM Direct Inference (ReACT) ########################
+#############################################################################
+
 CORA_REACT = """Here I give you the content of the node itself. Your task is to determine which of the following sub-categories of AI this paper belongs to: Rule_Learning, Neural_Networks, Case_Based, Genetic_Algorithms, Theory, Reinforcement_Learning, Probabilistic_Methods. 
 Solve this question by interleaving Thought, Action, Observation steps. Thought can reason about the current situation, and Action can be one of the following:
 (1) Search[entity], which searches the exact entity on Wikipedia and returns the first paragraph if it exists. If not, it will return some similar entities to search.
@@ -394,5 +423,3 @@ REACT_PROMPTS = {
     "reddit": REDDIT_REACT,
     "photo": PHOTO_REACT,
 }
-
-
