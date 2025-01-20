@@ -9,7 +9,8 @@ def invoke_llm_api(model_name, content):
     if model_name == "deepseek-chat":
         prediction = invoke_deepseek(content)
     elif model_name == "gpt-4o":
-        prediction = invoke_gpt(content)
+        # prediction = invoke_gpt(content)
+        prediction = invoke_gpt_customize_api(content)
     elif model_name in ["Mistral-7B-Instruct-v0.2", "Meta-Llama-3.1-8B-Instruct"]:
         prediction = invoke_opensource_llm(model_name, content)
 
@@ -30,6 +31,25 @@ def invoke_deepseek(content):
             stream=False
         )
     prediction = response.choices[0].message.content
+    return prediction
+
+def invoke_gpt_customize_api(content):
+    url = "https://api.deerapi.com/v1/chat/completions"
+    headers = {
+        "Content-Type": 'application/json', 
+        "Authorization": "Bearer " + MY_KEYS["openai_nonofficial_key"]
+    }
+    payload = json.dumps({
+        "model": "gpt-4o-mini", 
+        "messages": [
+            { "role": "user", "content": content }
+        ],
+        "stream": False
+    })
+
+    response = requests.post(url, headers=headers, data=payload, timeout=1000)
+    resp = response.json()
+    prediction = resp["choices"][0]["message"]["content"]
     return prediction
 
 
