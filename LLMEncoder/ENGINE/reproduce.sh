@@ -2,6 +2,8 @@ LM=roberta
 LLM=Mistral-7B
 DEVICE=cuda:0
 
+mkdir ../../results/ENGINE/logs
+
 # Cora
 for SPLIT in  0 ; do 
    for GNN in GCN; do 

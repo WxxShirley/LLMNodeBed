@@ -1,12 +1,15 @@
 #!/bin/bash
 
-ENCODERS=("shallow" "roberta" "Mistral-7B")
+ENCODERS=("shallow" "Mistral-7B")
 HIDDEN_DIMS=(64 128 256)
 LAYERS=(2 3)
 DROPOUTS=(0.5 0.7)
 GNNs=("GCN")
-DEVICE="cuda:1"
+DEVICE="cuda:0"
 
+# Semi-supervised Settings 
+#   - For Cora, Citeseer, and Pubmed, the `batch_norm` is set 0 
+#   - For remaining datasets, `batch_norm` is set to 1
 SUPERVISED=0
 DATASETS=("cora" "citeseer" "pubmed")
 for GNN in "${GNNs[@]}"; do 
@@ -23,7 +26,7 @@ for GNN in "${GNNs[@]}"; do
     done 
 done 
 
-DATASETS=("computer" "photo" "history" "wikics" "instagram" "reddit") 
+DATASETS=("computer" "photo" "history" "wikics" "instagram" "reddit" "arxiv") 
 for GNN in "${GNNs[@]}"; do 
     for DATASET in "${DATASETS[@]}"; do 
         for ENCODER in "${ENCODERS[@]}"; do  
@@ -40,6 +43,7 @@ done
 
 
 SUPERVISED=1
+DATASETS=("cora" "citeseer" "pubmed" "computer" "photo" "history" "wikics" "instagram" "reddit") 
 for GNN in "${GNNs[@]}"; do 
     for DATASET in "${DATASETS[@]}"; do 
         for ENCODER in "${ENCODERS[@]}"; do  
