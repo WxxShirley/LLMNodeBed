@@ -8,7 +8,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader
 sys.path.append("../..")
 from common import load_graph_dataset_for_llaga, set_seed, get_cur_time, compute_acc_and_f1
-from common import save_checkpoint, reload_best_model, MODEL_PATHs as llm_paths
+from common import save_checkpoint, reload_best_model, MODEL_PATHs as llm_paths, UNKNOW
 from llaga_model import LLaGAModel
 import argparse
 import time
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     set_seed(args.seed)
     
     llm_path = llm_paths[args.llm]
-    args.output_dim = {"Qwen-3B": 2048, "Qwen-7B": 3584, "Mistral-7B": 4096, "Llama-8B": 4096, "Qwen-14B": 5120}[args.llm]
+    args.output_dim = {"Qwen-3B": 2048, "Qwen-7B": 3584, "Mistral-7B": 4096, "Llama-8B": 4096, "Qwen-14B": 5120, "Qwen-32B": 5120}[args.llm]
     
     # Pre-process Node Classification Training Data 
     graph_data = load_graph_dataset_for_llaga(dataset_name=args.dataset, device=device, encoder=args.lm_encoder, re_split=args.re_split)
@@ -182,6 +182,7 @@ if __name__ == "__main__":
                     node_idx = node_idx.item()
                     # print(llm_pred)
                     pred_label = llm_pred[:llm_pred.index("</s>")] if "</s>" in llm_pred  else llm_pred
+                    pred_label = pred_label if pred_label in classes[args.dataset] else UNKNOW
                     write_obj = {
                         "id": node_idx,
                         "pred": llm_pred,
@@ -191,7 +192,7 @@ if __name__ == "__main__":
                     gt_labels.append(write_obj["ground-truth"])
                     file.write(json.dumps(write_obj) + "\n")
                     file.flush()
-                progress_bar.update(1)
+                progress_bar_test.update(1)
     inference_secs = time.time() - st_time
     
     acc, macro_f1, weight_f1 = compute_acc_and_f1(pred_labels, gt_labels)
