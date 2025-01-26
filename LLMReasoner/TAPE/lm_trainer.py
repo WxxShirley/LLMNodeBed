@@ -154,6 +154,7 @@ class LMTrainer():
 
     @torch.no_grad()
     def eval_and_save(self):
+        # if LM is set to SentenceBert, the dimension is 768
         emb = np.memmap(f"{self.ckpt_dir}.emb",
                         dtype=np.float16,
                         mode='w+',

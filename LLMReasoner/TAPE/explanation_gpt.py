@@ -15,20 +15,8 @@ GPT4o_RESOURCES = {
     "model": "gpt-4o-mini_2024-07-18",
     "pairs": [
         {
-            "endpoint": "https://gcraoai5sw1.openai.azure.com/",
+            "endpoint": "YOUR END POINT",
             "key": "YOUR KEY1",
-        },
-        {
-            "endpoint": "https://gcraoai5sw2.openai.azure.com/",
-            "key": "YOUR KEY2",
-        },
-        {
-            "endpoint": "https://gcrgpt4aoai5c.openai.azure.com/",
-            "key": "YOUR KEY3",
-        },
-        {
-            "endpoint": "https://gcrgpt4aoai5.openai.azure.com/",
-            "key": "YOUR KEY4"
         }
     ]
 }

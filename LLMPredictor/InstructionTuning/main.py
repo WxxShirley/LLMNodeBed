@@ -11,7 +11,7 @@ import csv
 import time
 sys.path.append("../..")
 from common import set_seed, load_graph_dataset, compute_acc_and_f1
-from common import BOS, EOS_USER, EOS, IGNORE_INDEX 
+from common import BOS, EOS_USER, EOS, IGNORE_INDEX, UNKNOW
 from common import CLASSES as classes 
 from common import IT_DESC as descriptions
 from common import MODEL_PATHs as llm_paths
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument('--num_epoch', type=int, default=2)
     parser.add_argument('--re_split', type=int, default=0)
     parser.add_argument('--batch_size', type=int, default=8) 
-    parser.add_argument('--num_gpus', type=int, default=1)
+    parser.add_argument('--num_gpus', type=int, default=2)
     args = parser.parse_args()
     print(args, "\n")
     
@@ -148,8 +148,8 @@ if __name__ == "__main__":
     tokenizer.padding_side = 'left'
     # TODO: you can adjust the GPU setting based on your own device
     kwargs = {'max_memory': {0: '80GiB'}, 'device_map': "auto"}
-    if args.num_gpus == 2: # specifically for sn14
-        kwargs = {'max_memory': {0: '80GiB', 1: '80GiB'}, 'device_map': "auto"}
+    if args.num_gpus == 2: 
+        kwargs = {'max_memory': {0: '48GiB', 1: '48GiB'}, 'device_map': "auto"}
     model = AutoModelForCausalLM.from_pretrained(llm_path, **kwargs)
     
     peft_config = LoraConfig(
@@ -176,7 +176,8 @@ if __name__ == "__main__":
 
     print(len(train_dataset), len(val_dataset), len(test_contents))
     alg_dir = f"../../results/InstructionTuning"
-    save_dir = f"{alg_dir}/output/{args.dataset}_{args.llm}"
+    re_split_str = '_s' if args.re_split else ''
+    save_dir = f"{alg_dir}/output/{args.dataset}{re_split_str}_{args.llm}"
     
     # TODO: adjust the eval_steps more flexible
     eval_steps = 20
@@ -221,7 +222,7 @@ if __name__ == "__main__":
     batch_size = args.batch_size * 2
     write_dir = f"{alg_dir}/prediction"
     os.makedirs(write_dir, exist_ok=True)
-    write_file = open(f"{write_dir}/{args.dataset}_{args.llm}.json", "w")
+    write_file = open(f"{write_dir}/{args.dataset}_{args.llm}{re_split_str}_seed{args.seed}.json", "w")
     pred_labels, gt_labels = [], [] 
     
     st_time = time.time()
@@ -249,8 +250,11 @@ if __name__ == "__main__":
             write_file.write(json.dumps(write_content) + "\n")
             write_file.flush()
             
-            pred_labels.append(pred_label.strip(" "))
-            gt_labels.append(label.strip(" "))
+            if pred_label[0] == ' ':
+                pred_label = pred_label[1:]
+            pred_label = pred_label if pred_label in classes[args.dataset] else UNKNOW
+            pred_labels.append(pred_label)
+            gt_labels.append(label)
     inference_secs = time.time() - st_time
     
     acc, macro_f1, weight_f1 = compute_acc_and_f1(pred_labels, gt_labels)

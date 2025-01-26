@@ -9,7 +9,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader
 sys.path.append("../..")
 from common import load_graph_dataset_for_llaga, set_seed, get_cur_time, compute_acc_and_f1, save_checkpoint, reload_best_model
-from common import MODEL_PATHs as llm_paths
+from common import MODEL_PATHs as llm_paths, UNKNOW
 from graphgpt_model import GraphGPTModel
 from dataset import GraphInstructionTuningDataset, GraphMatchingDataset, classes
 import argparse
@@ -23,7 +23,9 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--llm", type=str, default="Mistral-7B")
     parser.add_argument("--device", type=str, default="cuda:0")
+    parser.add_argument("--gpu_id", type=int, default=0)
     
+    # Training Configuration for Stage 1 - (Self-supervised Training) Graph Matching 
     parser.add_argument("--do_stage1", type=int, default=1)
     parser.add_argument("--s1_k_hop", type=int, default=2)
     parser.add_argument("--s1_num_neighbors", type=int, default=5)
@@ -32,13 +34,14 @@ if __name__ == "__main__":
     parser.add_argument("--s1_epoch", type=int, default=2)
     parser.add_argument("--s1_batch_size", type=int, default=16)
     parser.add_argument("--s1_lr", type=float, default=1e-4)
-
+    
+    # Training Configuration for Stage 2 - Instruction Tuning
     parser.add_argument("--do_stage2", type=int, default=1)
     parser.add_argument("--s2_num_neighbors", type=int, default=4)
     parser.add_argument("--s2_max_txt_length", type=int, default=256)
     parser.add_argument("--s2_max_ans_length", type=int, default=16)
     parser.add_argument("--s2_epoch", type=int, default=10)
-    parser.add_argument("--s2_batch_size", type=int, default=32)
+    parser.add_argument("--s2_batch_size", type=int, default=32) # adjust this parameter based on devices
     parser.add_argument("--s2_lr", type=float, default=1e-4)
     parser.add_argument("--s2_patience", type=int, default=2)
     
@@ -53,7 +56,8 @@ if __name__ == "__main__":
     print("## Starting Time:", get_cur_time(), flush=True)
     print(args, "\n")
     
-    device = torch.device(args.device)
+    # device = torch.device(args.device)
+    device = torch.device("cuda:"+str(args.gpu_id))
     set_seed(args.seed)
     
     llm_path = llm_paths[args.llm]
@@ -63,22 +67,18 @@ if __name__ == "__main__":
     graph_data = load_graph_dataset_for_llaga(dataset_name=args.dataset, device=torch.device("cpu"), encoder="roberta", re_split=args.re_split)
     graph_embedding = graph_data.x.to(device)
     if args.load_ground_embedding: 
-        assert os.path.exists(f"{args.output_dir}/ground_emb/{args.dataset}.pt"), "Please run `main_text_graph_grounding` to generate grounded embedding first!"
+        assert os.path.exists(f"{args.output_dir}/ground_emb/{args.dataset}.pt"), "You have set `load_ground_embedding` to True. Please run `main_text_graph_grounding` to generate grounded embedding first!"
         graph_embedding = torch.load(f"{args.output_dir}/ground_emb/{args.dataset}.pt").to(device)
     
     st_time = time.time()   
     if args.do_stage1: 
         print("Preparing Stage 1 [Graph Matching] ...")
-        
-        graph_type = {"cora": "academic_network", "citeseer": "academic_network", "pubmed": "academic_network", "wikics": "academic_network", "arxiv": "academic_network", "reddit": "social_network", "instagram": "social_network"}[args.dataset]
-        dataset = GraphMatchingDataset(graph_data=graph_data, k_hop=args.s1_k_hop, num_sampled_neighbors=args.s1_num_neighbors, graph_type=graph_type)
-        train_loader = DataLoader(dataset, batch_size=args.s1_batch_size, drop_last=True, shuffle=True)
-        
-        model = GraphGPTModel(args, llm_path, graph_embedding=graph_embedding, stage="matching")
 
+        model = GraphGPTModel(args, llm_path, graph_embedding=graph_embedding, stage="matching")
         if os.path.exists(f"{args.output_dir}/output/{args.dataset}/stage1_best.pth"):
             model = reload_best_model(model, f"{args.output_dir}/output/{args.dataset}", config_str="stage1")
             args.s1_epoch = 0
+            args.s1_lr = args.s2_lr
         
         params = [p for _, p in model.named_parameters() if p.requires_grad]
         optimizer = torch.optim.AdamW([{'params': params, 'lr': args.s1_lr, 'weight_decay': args.wd}])
@@ -86,37 +86,46 @@ if __name__ == "__main__":
         trainable_params, all_params = model.print_trainable_params()
         print(f"Trainable params {trainable_params} || all params {all_params} || trainable% {100 * trainable_params / all_params:.5f}")
         
-        num_training_steps = args.s1_epoch * len(train_loader)
-        progress_bar = tqdm(range(num_training_steps))
+        if args.s1_epoch > 0:
+            graph_type = {
+                "cora": "academic_network", "citeseer": "academic_network", "pubmed": "academic_network", "wikics": "academic_network", "arxiv": "academic_network", 
+                "reddit": "social_network", "instagram": "social_network",
+                "computer": "ecommerce_network", "photo": "ecommerce_network", "history": "ecommerce_network"
+            }[args.dataset]
+            dataset = GraphMatchingDataset(graph_data=graph_data, k_hop=args.s1_k_hop, num_sampled_neighbors=args.s1_num_neighbors, graph_type=graph_type)
+            train_loader = DataLoader(dataset, batch_size=args.s1_batch_size, drop_last=True, shuffle=True)
         
-        model.model.gradient_checkpointing_enable()
-        for epoch in range(args.s1_epoch):
-            model.train()
-            
-            epoch_loss, accum_loss = 0.0, 0.0
-            
-            for step, batch in enumerate(train_loader):
-                optimizer.zero_grad() 
-                
-                loss = model(batch)
-                loss.backward()
-                
-                clip_grad_norm_(optimizer.param_groups[0]['params'], 0.1)
-                optimizer.step() 
-                epoch_loss, accum_loss = epoch_loss + loss.item(), accum_loss + loss.item()
-                
-                if (step+1) % 20 == 0:
-                    lr = optimizer.param_groups[0]["lr"]
-                    print(f"(Temporary) Step {step} in Epoch {epoch+1} Accum Loss {accum_loss:.4f}")
-                    accum_loss = 0.0 
-                
-                progress_bar.update(1)
-            
-            print(f"[TRAIN] Epoch {epoch+1}|{args.s1_epoch}: Train Loss (Epoch Mean): {epoch_loss / len(train_loader):.5f}")
-            save_checkpoint(model, args.s1_epoch, f"{args.output_dir}/output/{args.dataset}", config_str="stage1", is_best=True) 
+            num_training_steps = args.s1_epoch * len(train_loader)
+            progress_bar = tqdm(range(num_training_steps))
         
-        torch.cuda.empty_cache()
-        torch.cuda.reset_max_memory_allocated()
+            model.model.gradient_checkpointing_enable()
+            for epoch in range(args.s1_epoch):
+                model.train()
+            
+                epoch_loss, accum_loss = 0.0, 0.0
+            
+                for step, batch in enumerate(train_loader):
+                    optimizer.zero_grad() 
+                
+                    loss = model(batch)
+                    loss.backward()
+                
+                    clip_grad_norm_(optimizer.param_groups[0]['params'], 0.1)
+                    optimizer.step() 
+                    epoch_loss, accum_loss = epoch_loss + loss.item(), accum_loss + loss.item()
+                
+                    if (step+1) % 20 == 0:
+                        lr = optimizer.param_groups[0]["lr"]
+                        print(f"(Temporary) Step {step} in Epoch {epoch+1} Accum Loss {accum_loss:.4f}")
+                        accum_loss = 0.0 
+                
+                    progress_bar.update(1)
+            
+                print(f"[TRAIN] Epoch {epoch+1}|{args.s1_epoch}: Train Loss (Epoch Mean): {epoch_loss / len(train_loader):.5f}")
+                save_checkpoint(model, args.s1_epoch, f"{args.output_dir}/output/{args.dataset}", config_str="stage1", is_best=True) 
+        
+            torch.cuda.empty_cache()
+            torch.cuda.reset_max_memory_allocated()
     
     if args.do_stage2: 
         print("Preparing Stage 2 [Instruction Tuning] ...")
@@ -125,7 +134,7 @@ if __name__ == "__main__":
             model = GraphGPTModel(args, llm_path, graph_embedding=graph_embedding, stage="matching")
         
             params = [p for _, p in model.named_parameters() if p.requires_grad]
-            optimizer = torch.optim.AdamW([{'params': params, 'lr': args.s1_lr, 'weight_decay': args.wd}])
+            optimizer = torch.optim.AdamW([{'params': params, 'lr': args.s2_lr, 'weight_decay': args.wd}])
             trainable_params, all_params = model.print_trainable_params()
             print(f"Trainable params {trainable_params} || all params {all_params} || trainable% {100 * trainable_params / all_params:.5f}")
         else:
@@ -148,7 +157,6 @@ if __name__ == "__main__":
         llm_config_str = f"{args.llm}_Epoch{args.s2_epoch}"
         folder_str = f"{args.output_dir}/output/{args.dataset}"
         for epoch in range(args.s2_epoch):
-        # for epoch in range(0):
             model.train()
             
             epoch_loss, accum_loss = 0.0, 0.0 
@@ -197,13 +205,14 @@ if __name__ == "__main__":
     
     os.makedirs(f"{args.output_dir}/prediction", exist_ok=True)
     re_split_str = '_s' if args.re_split else ''
-    path = f"{args.output_dir}/prediction/{args.dataset}_{args.llm}{re_split_str}.json"
+    path = f"{args.output_dir}/prediction/{args.dataset}_{args.llm}{re_split_str}_seed{args.seed}.json"
     print(f"\n[Prediction] Write predictions on {path} ...")
     progress_bar = tqdm(range(len(test_loader)))
     
     pred_labels, gt_labels = [], []
     
     st_time = time.time()
+    valid_labels = classes[args.dataset]
     with open(path, 'w') as file:
         for step, batch in enumerate(test_loader):
             with torch.no_grad():
@@ -218,6 +227,7 @@ if __name__ == "__main__":
                         "pred": llm_pred,
                         "ground-truth": classes[args.dataset][graph_data.y[node_idx].item()]
                     }
+                    pred_label = pred_label if pred_label in valid_labels else UNKNOW
                     pred_labels.append(pred_label) 
                     gt_labels.append(write_obj["ground-truth"])
                     file.write(json.dumps(write_obj) + "\n")
