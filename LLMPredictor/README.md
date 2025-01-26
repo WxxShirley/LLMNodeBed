@@ -3,7 +3,7 @@
 This folder contains three LLM-as-Predictor methods: `InstructionTuning` for LLM Instruction Tuning, `GraphGPT` for the [GraphGPT](https://arxiv.org/abs/2310.13023) algorithm, and `LLaGA` for the [LLaGA](https://arxiv.org/abs/2402.08170) algorithm. 
 
 
-## Usage 
+## 🚀 Usage 
 
 ### InstructionTuning 
 
@@ -28,7 +28,7 @@ For additional hyperparameter settings (e.g., number of epochs, batch size, maxi
 
 ### GraphGPT 
 
-*Preparation* Before running `main.py` for GraphGPT, you need to prepare LM-encoded node attributes for the dataset, which will be fed into the LLMs as graph context.
+***Preparation*** Before running `main.py` for GraphGPT, you need to prepare LM-encoded node attributes for the dataset, which will be fed into the LLMs as graph context.
 ```shell 
 cd LLMEncoder/GNN
 
@@ -36,7 +36,7 @@ cd LLMEncoder/GNN
 python3 embedding.py --dataset=cora --encoder_name=roberta
 ```
 
-*Execution* The three-stages (text-graph grounding, graph matching, and classification insturcition tuning) are optional. 
+***Execution*** The three-stages (text-graph grounding, graph matching, and classification insturcition tuning) are optional. 
 ```shell 
 cd GraphGPT 
 
@@ -64,6 +64,6 @@ For additional hyperparameter settings for each dataset, please refer to `reprod
 
 
 
-## Acknowledgements 
+## 🙏 Acknowledgements 
 
 We express our gratitude for the official implementations of [GraphGPT](https://github.com/HKUDS/GraphGPT) and [LLaGA](https://github.com/VITA-Group/LLaGA).
