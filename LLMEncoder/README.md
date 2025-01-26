@@ -5,9 +5,9 @@ This folder contains three methods: `GNN` for GNNs, `ENGINE` for the [ENGINE](ht
 Both GNNs and MLPs can accept **arbitrary node embeddings**, including shallow embeddings or those generated from LM or LLMs. 
 
 
-## Usage 
+## 🚀 Usage 
 
-### $GNN_{\text{LLMEmb}}$
+### $\text{GNN}_{\text{LLMEmb}}$
 
 To utilize the GNN method with LLM-generated embeddings, you first need to run `embedding.py` to encode the node embeddings for your specified dataset. 
 
@@ -75,6 +75,6 @@ python3 -u main.py --gnn_type=GCN --dataset=citeseer --hidden=128 --n_layers=1 -
 ```
 
 
-## Acknowledgement
+## 🙏 Acknowledgement
 
 Thanks to the [official implementation](https://github.com/ZhuYun97/ENGINE) of the ENGINE algorithm!
