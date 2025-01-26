@@ -64,7 +64,7 @@ if __name__ == "__main__":
             answers = llm_tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
             del model_inputs, generated_ids 
         else:
-            # avoid over-length
+            # avoid over-length (for WikiCS)
             text_batch = [text[:min(len(text), 2048)] for text in text_batch]
             
             batch_prompts = [f"{text}\n{prompt}" for text in text_batch]

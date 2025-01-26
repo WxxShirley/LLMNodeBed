@@ -69,7 +69,7 @@ class GNNTrainer():
                                 gnn_type=self.gnn_model_name,
                                 dropout=self.dropout,
                                 # for pubmed (semi-supervised), batch_norm=0
-                                batch_norm=1 # if self.dataset_name != "pubmed" else 0
+                                batch_norm=1 if self.dataset_name != "pubmed" else 0
                                 ).to(self.device)
         
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
