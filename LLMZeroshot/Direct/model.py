@@ -63,7 +63,8 @@ class LLMDirectInference:
                 
                 query_content = f"{origin_txt}\n{neighbor_str}\n{self.prompt}"
             else:
-                query_content = f"{origin_txt}\n{self.prompt}"
+                reformat_str = "The answer should be in the strict format as: <reason: >, <classification: Your Classified Label>." if self.prompt_type in ["tot", "react"] else ""
+                query_content = f"{origin_txt}\n{self.prompt}{reformat_str}"
 
             try: 
                 prediction = invoke_llm_api(self.llm_name, query_content)
@@ -79,9 +80,13 @@ class LLMDirectInference:
                 true_label = self.label_space[self.graph_data.y[idx].cpu().item()]
                 if self.prompt_type in ['cot', 'tot', 'react']:
                     match = re.search(r'<classification:\s*(.*?)>', prediction)
-                    if match and match.group(1) != "":
+                    if match is not None and match.group(1) != "":
                         prediction = match.group(1)
-                    
+                    else:
+                        match = re.search(r'<classification:\s*>?\s*([\w_]+)', prediction)
+                        if match is not None and match.group(1) != "":
+                            prediction = match.group(1)
+
                 prediction = prediction[:11] if self.dataset_name == "arxiv" else prediction
                 self.writer.writerow([idx, prediction, true_label])
                 print(idx, prediction, true_label)
