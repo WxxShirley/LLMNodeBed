@@ -14,6 +14,17 @@ To use the Direct Inference, you need to first **fill in the LLM API Key** in th
 * Open-source LLMs: LLaMA3.1-8B, Mistral-7B  
   *Note: Open-source LLMs must be deployed locally using FastChat + vLLM.*
 
+  ```shell
+  # Example scripts for deploying local LLM services
+  #  - Install dependencies
+  pip install vllm "fschat[model_worker,webui]"
+
+  #  - Start services
+  python3 -m fastchat.serve.controller --host 127.0.0.1
+  CUDA_VISIBLE_DEVICES=0 python3 -m fastchat.serve.vllm_worker --model-path mistralai/Mistral-7B-Instruct-v0.2 --host 127.0.0.1
+  python3 -m fastchat.serve.openai_api_server --host 127.0.0.1 --port 8008
+  ```
+
 **Supported Prompt Templates:**
 * Direct
 * Chain-of-Thought (CoT)
