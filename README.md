@@ -31,7 +31,9 @@ pip install torch torch_geometric transformers peft pytz scikit-learn torch_scat
 
 * **Open-source LLMs like Mistral-7B, Qwen**:
 
-  Update model paths in `common/model_path.py`. Example paths: 
+  Download models from HuggingFace (e.g., [Mistral-7B](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2)). Then, update model paths in `common/model_path.py`.
+
+  Example paths: 
   ```python 
   MODEL_PATHs = {
     "MiniLM": "sentence-transformers/all-MiniLM-L6-v2",
@@ -40,8 +42,6 @@ pip install torch torch_geometric transformers peft pytz scikit-learn torch_scat
     # See full list in common/model_path.py
   }
   ```
-
-  Download models from HuggingFace (e.g., [Mistral-7B](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2)).
 
 
 ### 2. Datasets 
