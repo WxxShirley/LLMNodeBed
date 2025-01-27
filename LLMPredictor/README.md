@@ -26,6 +26,7 @@ WANDB_DISABLED=True python main.py --num_epoch=4 --llm=Mistral-7B  --batch_size=
 For additional hyperparameter settings (e.g., number of epochs, batch size, maximum input/output text lengths), please refer to `reproduce.sh`.
 
 You can specify the available GPUs using `CUDA_VISIBLE_DEVICES=1,2` (for GPUs 1 and 2)
+
 Besides, in `InstructionTuning/main.py`, you can adjust the GPU configurations based on your own device: 
 ```python 
 # Lines 150 - 154 in InstructionTuning/main.py
@@ -73,7 +74,7 @@ cd LLaGA
 
 python3 -u main.py --neighbor_template=HO --dataset=cora --re_split=0  --num_epochs=12 --llm=Mistral-7B --patience=4 
 ```
-For additional hyperparameter settings for each dataset, please refer to `reproduce.sh`, which contains configurations using Mistral-7B as the backbone. Configurations for other LLMs will be provided soon.
+For additional hyperparameter settings for each dataset, please refer to `run.sh`, which contains configurations using Mistral-7B or Qwen-3B as the backbone. Configurations for other LLMs will be provided soon.
 
 You can change the GPU configurations in `LLaGA/llaga_model.py` based on your own devices: 
 ```python
