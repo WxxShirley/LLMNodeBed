@@ -1,9 +1,7 @@
 # LLMNodeBed
 
-This repository is the official implementation of the paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 algorithms**, and **3 learning paradigms**. Designed for flexibility, researchers can easily integrate new datasets or algorithms.
+This repository is the official implementation of the paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. Designed for flexibility, researchers can easily integrate new datasets or algorithms.
 
-
----
 
 ## 📝 Table of Contents
 - [🚀 Quick Start](#-quick-start)
@@ -122,4 +120,4 @@ LLMNodeBed/
 
 ## 🙏 Acknowledgements
 
-We thank the authors of TAPE, ENGINE, GraphGPT, and ZeroG for their open-source implementations. Part of our framework is inspired by [GLBench](https://github.com/NineAbyss/GLBench).
+We thank the authors of TAPE, ENGINE, GraphGPT, LLaGA, and ZeroG for their open-source implementations. Part of our framework is inspired by [GLBench](https://github.com/NineAbyss/GLBench).
