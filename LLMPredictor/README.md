@@ -25,6 +25,19 @@ WANDB_DISABLED=True python main.py --num_epoch=4 --llm=Mistral-7B  --batch_size=
 
 For additional hyperparameter settings (e.g., number of epochs, batch size, maximum input/output text lengths), please refer to `reproduce.sh`.
 
+You can specify the available GPUs using `CUDA_VISIBLE_DEVICES=1,2` (for GPUs 1 and 2)
+Besides, in `InstructionTuning/main.py`, you can adjust the GPU configurations based on your own device: 
+```python 
+# Lines 150 - 154 in InstructionTuning/main.py
+kwargs = {'max_memory': {0: '80GiB'}, 'device_map': "auto"}
+if args.num_gpus == 2:
+    # Example for 2 x A6000-48G GPUs
+    kwargs = {'max_memory': {0: '48GiB', 1: '48GiB'}, 'device_map': "auto"}
+model = AutoModelForCausalLM.from_pretrained(llm_path, **kwargs) 
+```
+
+The example commands in `reproduce.sh` can be successfully executed on a single H100-80G GPU or two A6000-48G GPUs. If you encounter CUDA OOM errors, please **adjust the `batch_size`**.
+
 
 ### GraphGPT 
 
@@ -62,6 +75,20 @@ python3 -u main.py --neighbor_template=HO --dataset=cora --re_split=0  --num_epo
 ```
 For additional hyperparameter settings for each dataset, please refer to `reproduce.sh`, which contains configurations using Mistral-7B as the backbone. Configurations for other LLMs will be provided soon.
 
+You can change the GPU configurations in `LLaGA/llaga_model.py` based on your own devices: 
+```python
+# TODO: please change the following configurations based on your own device
+kwargs = { 
+    "max_memory": {args.gpu_id: '80GiB'}, # 1 H100-80G
+    "device_map": "auto",
+}
+
+if args.num_gpus == 2:
+    kwargs = {
+        "max_memory": {0: '48GiB', 1: '48GiB'}, # 2 A6000-48G
+        "device_map": "auto",
+    }
+```
 
 
 ## 🙏 Acknowledgements 

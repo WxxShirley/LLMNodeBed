@@ -21,13 +21,14 @@ class LLaGAModel(torch.nn.Module):
         self.tokenizer.pad_token_id = 0
         self.tokenizer.padding_side = 'left'
         
+        # TODO: please change the following configurations based on your own device
         kwargs = {
             "max_memory": {args.gpu_id: '80GiB'},
             "device_map": "auto",
         }
         if args.num_gpus == 2:
             kwargs = {
-                "max_memory": {0: '40GiB', 1: '40GiB'},
+                "max_memory": {0: '48GiB', 1: '48GiB'},
                 "device_map": "auto",
             }
         model = AutoModelForCausalLM.from_pretrained(llm_path, torch_dtype=torch.float16, **kwargs)
