@@ -89,13 +89,13 @@ Then, the Mistral-7B model can be invoked via the url `http://127.0.0.1:8008/v1/
 
 Refer to method-specific READMEs for execution details:
 
-* **LLM-as-Encoder**: `LLMEncoder/`
+* **LLM-as-Encoder**: [`LLMEncoder/README.md`](https://github.com/WxxShirley/LLMNodeBed/tree/main/LLMEncoder)
 
-* **LLM-as-Predictor**: `LLMPredictor/`
+* **LLM-as-Predictor**: [`LLMPredictor/README.md`](https://github.com/WxxShirley/LLMNodeBed/tree/main/LLMPredictor)
 
-* **LLM-as-Reasoner**: `LLMReasoner/`
+* **LLM-as-Reasoner**: [`LLMReasoner/README.md`](https://github.com/WxxShirley/LLMNodeBed/tree/main/LLMReasoner)
 
-* **Zero-shot Methods**: `LLMZeroShot/`
+* **Zero-shot Methods**: [`LLMZeroShot/README.md`](https://github.com/WxxShirley/LLMNodeBed/tree/main/LLMZeroshot)
 
 
 
