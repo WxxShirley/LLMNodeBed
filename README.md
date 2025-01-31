@@ -2,6 +2,16 @@
 
 This repository is the official implementation of the paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. Designed for flexibility, researchers can easily integrate new datasets or algorithms.
 
+<img src="README.assets/framework.jpg" width="60%" align="center"> </img> 
+
+
+> Feel free to cite this work if you find it useful to you! 😄
+
+
+```bibtext
+
+```
+
 
 ## 📝 Table of Contents
 - [🚀 Quick Start](#-quick-start)
