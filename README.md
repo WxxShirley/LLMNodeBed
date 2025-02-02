@@ -1,36 +1,49 @@
 # LLMNodeBed
+<p align="center">
+   <a href="https://llmnodebed.github.io/"><img src="https://img.shields.io/badge/🌐-Website-red" height="25"></a>
+  <a href=""><img src="https://img.shields.io/badge/📝-Paper-blue" height="25"></a>
+</p>
 
-This repository is the official implementation of the paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. Designed for flexibility, researchers can easily integrate new datasets or algorithms.
-
-<img src="README.assets/framework.jpg" width="60%" align="center"> </img> 
+This repository is the official implementation of the paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. 
 
 
-> Feel free to cite this work if you find it useful to you! 😄
+> Please consider citing or giving a 🌟 if our repository is helpful to your work!
 
 
 ```bibtext
 
 ```
 
+### 🎙️ News 
+
+📅 [2025-02-03] The [code](https://github.com/WxxShirley/LLMNodeBed) for LLMNodebed, along with the [project pages](https://llmnodebed.github.io/) and [paper](), has now been released! 🧨
+
+
+---
+
+
 
 ## 📝 Table of Contents
 - [🚀 Quick Start](#-quick-start)
 - [📖 Code Structure](#-code-structure)
 - [🔧 Supported Methods](#-supported-methods)
+- [📮 Contact](#-contact)
 - [🙏 Acknowledgements](#-acknowledgements)
 
----
 
 
 ## 🚀 Quick Start 
 
 ### 0. Environment Setup
-Create a conda environment and install dependencies:
+To get started, follow these steps to set up your Python environment: 
+
 ```bash
 conda create -n NodeBed python=3.10
 conda activate NodeBed
 pip install torch torch_geometric transformers peft pytz scikit-learn torch_scatter torch_sparse
-``` 
+```
+
+Some packages might be missed for specific algorithms. Check the algorithm READMD or error logs to identify any missing dependencies and install them accordingly.
 
 
 ### 1. LLM Preparation 
@@ -41,7 +54,7 @@ pip install torch torch_geometric transformers peft pytz scikit-learn torch_scat
 
 * **Open-source LLMs like Mistral-7B, Qwen**:
 
-  Download models from HuggingFace (e.g., [Mistral-7B](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2)). Then, update model paths in `common/model_path.py`.
+  Download models from HuggingFace (e.g., [Mistral-7B](https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.2)). Then, update model paths in `common/model_path.py` as you actual saving paths.
 
   Example paths: 
   ```python 
@@ -61,6 +74,7 @@ Download datasets from [Google Drive](https://drive.google.com/file/d/14GmRVwhP1
 Before running LLM-based algorithms, please generate LM / LLM-encoded embeddings as follows: 
 ```shell 
 cd LLMEncoder/GNN
+
 python3 embedding.py --dataset=cora --encoder_name=roberta      # LM embeddings
 python3 embedding.py --dataset=cora --encoder_name=Mistral-7B  # LLM embeddings
 ```
@@ -128,6 +142,14 @@ LLMNodeBed/
 | LLM Instruction Tuning       | -        | Ours Implemented                           | `LLMPredictor/Instruction Tuning` |
 | Direct Inference             | -        | Ours Implemented                           | `LLMZeroShot/Direct`              |
 
+
+## 📮 Contact 
+
+If you have any further questions about usage, reproducibility, or would like to discuss, please feel free to open an issue or contact the authors via email at xxwu@se.cuhk.edu.hk.
+
+
+
 ## 🙏 Acknowledgements
 
 We thank the authors of TAPE, ENGINE, GraphGPT, LLaGA, and ZeroG for their open-source implementations. Part of our framework is inspired by [GLBench](https://github.com/NineAbyss/GLBench).
+
