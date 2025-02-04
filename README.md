@@ -1,7 +1,7 @@
 # LLMNodeBed
 <p align="center">
    <a href="https://llmnodebed.github.io/"><img src="https://img.shields.io/badge/🌐-Website-red" height="25"></a>
-  <a href=""><img src="https://img.shields.io/badge/📝-Paper-blue" height="25"></a>
+  <a href="https://arxiv.org/abs/2502.00829"><img src="https://img.shields.io/badge/📝-Paper-blue" height="25"></a>
 </p>
 
 This repository is the official implementation of the paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. 
@@ -24,7 +24,7 @@ This repository is the official implementation of the paper: **A Comprehensive A
 
 ### 🎙️ News 
 
-📅 [2025-02-03] The [code](https://github.com/WxxShirley/LLMNodeBed) for LLMNodebed, along with the [project pages](https://llmnodebed.github.io/) and [paper](), has now been released! 🧨
+📅 [2025-02-04] The [code](https://github.com/WxxShirley/LLMNodeBed) for LLMNodebed, along with the [project pages](https://llmnodebed.github.io/) and [paper](https://arxiv.org/abs/2502.00829), has now been released! 🧨
 
 
 ---
