@@ -11,7 +11,15 @@ This repository is the official implementation of the paper: **A Comprehensive A
 
 
 ```bibtext
-
+@misc{wu2025llmnodebed,
+      title={A Comprehensive Analysis on LLM-based Node Classification Algorithms}, 
+      author={Xixi Wu and Yifei Shen and Fangzhou Ge and Caihua Shan and Yizhu Jiao and Xiangguo Sun and Hong Cheng},
+      year={2025},
+      eprint={2502.00829},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2502.00829}, 
+}
 ```
 
 ### 🎙️ News 
