@@ -27,7 +27,7 @@ class LLMDirectInference:
         self.prompt = prompt_mapping[prompt_type].get(dataset_name, "")
 
         self.llm_name = llm_name 
-        self.writer = csv.writer(open(write_file_path, 'a', newline=''))
+        self.write_path = write_file_path
         self.maximum_neighbor = maximum_neighbor
         self.label_space = graph_data.label_name
         
@@ -78,15 +78,58 @@ class LLMDirectInference:
 
             if prediction:
                 true_label = self.label_space[self.graph_data.y[idx].cpu().item()]
-                if self.prompt_type in ['cot', 'tot', 'react']:
-                    match = re.search(r'<classification:\s*(.*?)>', prediction)
-                    if match is not None and match.group(1) != "":
-                        prediction = match.group(1)
-                    else:
-                        match = re.search(r'<classification:\s*>?\s*([\w_]+)', prediction)
+
+                # Open-source LLM
+                if self.llm_name in ['Llama-3.1-8B-Instruct', 'Mistral-7B-Instruct-v0.2']:
+                    origin_pred = copy.deepcopy(prediction)
+                    prediction = post_parse_for_opensource_llm(prediction, self.label_space, self.dataset_name)
+
+                    if prediction == " " and self.prompt_type in ["cot", "tot", "react"]:
+                        reformat_query = f"{origin_pred}\nGiven the content, what is the final classification answer? Here are the categories: {self.label_space}. Only answer ONE category name."
+                        prediction = invoke_llm_api(self.llm_name, reformat_query)
+                        prediction = post_parse_for_opensource_llm(prediction, self.label_space, self.dataset_name)
+                        
+                # Close-source LLM
+                else:
+                    if self.prompt_type in ['cot', 'tot', 'react']:
+                        match = re.search(r'<classification:\s*(.*?)>', prediction)
                         if match is not None and match.group(1) != "":
                             prediction = match.group(1)
+                        else:
+                            match = re.search(r'<classification:\s*>?\s*([\w_]+)', prediction)
+                            if match is not None and match.group(1) != "":
+                                prediction = match.group(1)
 
                 prediction = prediction[:11] if self.dataset_name == "arxiv" else prediction
-                self.writer.writerow([idx, prediction, true_label])
+                
+                with open(self.write_path, 'a', newline='') as file:
+                    writer = csv.writer(file) 
+                    writer.writerow([idx, prediction, true_label])
+                    file.flush()
+                
                 print(idx, prediction, true_label)
+
+
+def post_parse_for_opensource_llm(pred_str, label_space, dataset_name):
+    # print("RAW: ", pred_str)
+    lines = [line.strip() for line in pred_str.splitlines() if line.strip()]
+
+    for line in reversed(lines):
+        match = re.fullmatch(r'[\w\s]+', line)
+        if match:
+            prediction = match.group(0)
+            return prediction 
+    
+    for gt_label in label_space:
+        candidates = {
+            "cora": [gt_label, gt_label.replace('_', ' '), gt_label.replace('_', '-'), gt_label.lower()], 
+            "instagram": [gt_label, gt_label.lower(), gt_label[:-1], gt_label[:-1].lower(), gt_label.split(" ")[0]],
+            "photo": [gt_label, gt_label.lower()],
+            "wikics": [gt_label, gt_label.lower()]
+         }[dataset_name]
+        
+        for candidate in candidates:
+            if candidate in pred_str:
+                 return gt_label
+            
+    return " "

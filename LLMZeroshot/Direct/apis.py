@@ -11,7 +11,7 @@ def invoke_llm_api(model_name, content):
     elif model_name == "gpt-4o":
         # prediction = invoke_gpt(content)
         prediction = invoke_gpt_customize_api(content)
-    elif model_name in ["Mistral-7B-Instruct-v0.2", "Meta-Llama-3.1-8B-Instruct"]:
+    elif model_name in ["Mistral-7B-Instruct-v0.2", "Llama-3.1-8B-Instruct"]:
         prediction = invoke_opensource_llm(model_name, content)
 
     return prediction

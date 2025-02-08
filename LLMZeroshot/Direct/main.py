@@ -51,7 +51,6 @@ if __name__ == "__main__":
     pred_obj.do_prediction(test_indexes, has_inferenced_index)
 
     # Calculate acc and f1
-    time.sleep(4)
     acc, f1, hall = simiple_evaluate(file_path, pred_obj.label_space)
     print(f"{args.model_name} on {args.dataset} with prompt template {args.prompt_type}")
     print(f"Accuracy {acc}  Macro-F1 {f1}  Hallucination {hall}")
