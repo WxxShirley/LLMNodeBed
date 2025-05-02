@@ -4,7 +4,7 @@
   <a href="https://arxiv.org/abs/2502.00829"><img src="https://img.shields.io/badge/📝-Paper-blue" height="25"></a>
 </p>
 
-This repository is the official implementation of the paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. 
+This repository is the official implementation for our ICML 2025 paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. 
 
 
 > Please consider citing or giving a 🌟 if our repository is helpful to your work!
@@ -23,6 +23,7 @@ This repository is the official implementation of the paper: **A Comprehensive A
 ```
 
 ### 🎙️ News 
+🎉 [2025-05-01] Our paper is accepted to **ICML 2025**. The camera ready paper, integration of more baseline methods, and corresponding blogs will be released soon!  
 
 📅 [2025-02-04] The [code](https://github.com/WxxShirley/LLMNodeBed) for LLMNodebed, along with the [project pages](https://llmnodebed.github.io/) and [paper](https://arxiv.org/abs/2502.00829), has now been released! 🧨
 
