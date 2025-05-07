@@ -1,7 +1,8 @@
 # LLMNodeBed
 <p align="center">
    <a href="https://llmnodebed.github.io/"><img src="https://img.shields.io/badge/🌐-Website-red" height="25"></a>
-  <a href="https://arxiv.org/abs/2502.00829"><img src="https://img.shields.io/badge/📝-Paper-blue" height="25"></a>
+   <a href="https://arxiv.org/abs/2502.00829"><img src="https://img.shields.io/badge/📝-Paper-blue" height="25"></a>
+   <a href="https://huggingface.co/datasets/xxwu/LLMNodeBed/tree/main"><img src="https://img.shields.io/badge/🤗-Dataset-green" height="25"></a>
 </p>
 
 This repository is the official implementation for our ICML 2025 paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. 
@@ -78,7 +79,7 @@ Some packages might be missed for specific algorithms. Check the algorithm READM
 
 ### 2. Datasets 
 
-Download datasets from [Google Drive](https://drive.google.com/file/d/14GmRVwhP1pUD_OIhoJU3oATZWTnklhPG/view) and unzip into the `datasets` folder.
+Download datasets either from [Google Drive](https://drive.google.com/file/d/14GmRVwhP1pUD_OIhoJU3oATZWTnklhPG/view) or [HuggingFace](https://huggingface.co/datasets/xxwu/LLMNodeBed/tree/main) and unzip into the `datasets` folder.
 
 Before running LLM-based algorithms, please generate LM / LLM-encoded embeddings as follows: 
 ```shell 
