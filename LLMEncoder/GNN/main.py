@@ -5,10 +5,11 @@ import os
 import sys
 sys.path.append("../..")
 from common import load_graph_dataset_for_gnn, GNNEncoder, array_mean_std, compute_acc_and_f1, set_seed
+from common import HeteroGNNEncoder, plain_adj_matrix
 import torch.nn.functional as F
 
 
-DEFAULT_LM, DEFAULT_LLM = "SentenceBert", "Mistral-7B"
+DEFAULT_LM, DEFAULT_LLM = "roberta", "Mistral-7B"
 
 
 def gnn_train():
@@ -42,11 +43,11 @@ if __name__ == "__main__":
 
     parser.add_argument("--dataset", type=str, default="cora")
     # Encoder
-    #  - Note that we set default "LM" as SentenceBert, and default "LLM" as Mistral-7B
+    #  - Note that we set default "LM" as roberta, and default "LLM" as Mistral-7B
     parser.add_argument("--encoder_name", type=str, default="", choices=["", "shallow", "LM", "LLM", "e5-large", "SentenceBert", "MiniLM", "roberta", "Qwen-3B", "Mistral-7B", "Qwen-7B", "Llama-8B"])
     
     # GNN configuration
-    parser.add_argument("--gnn_type", type=str, default="GCN", choices=["GCN", "GAT", "SAGE", "TransformerConv"])
+    parser.add_argument("--gnn_type", type=str, default="GCN", choices=["GCN", "GAT", "SAGE", "TransformerConv", "HeteroGNN"])
     parser.add_argument("--n_layers", type=int, default=2)
     parser.add_argument("--hidden_dim", type=int, default=128)
     parser.add_argument("--dropout", type=float, default=0.5)
@@ -90,18 +91,27 @@ if __name__ == "__main__":
                                                 device=device, 
                                                 emb_model=args.encoder_name if len(args.encoder_name) else "shallow", 
                                                 re_split=args.re_split)
+        
+        if args.gnn_type == "HeteroGNN": 
+            graph_data.edge_index = plain_adj_matrix(graph_data.edge_index, graph_data.num_nodes).to(device)
+            gnn_model = HeteroGNNEncoder(input_dim=graph_data.x.shape[1],
+                                         hidden_dim=args.hidden_dim,
+                                         output_dim=len(graph_data.label_name),
+                                         n_layers=args.n_layers, 
+                                         dropout=args.dropout).to(device)
+        else:
+            gnn_model = GNNEncoder(input_dim=graph_data.x.shape[1],
+                                   hidden_dim=args.hidden_dim, 
+                                   output_dim=len(graph_data.label_name),
+                                   n_layers=args.n_layers,
+                                   gnn_type=args.gnn_type,
+                                   dropout=args.dropout,
+                                   use_softmax=args.use_softmax,
+                                   batch_norm=args.batch_norm,
+                                   residual_conn=args.residual_conn,
+                                   jump_knowledge=args.jump_knowledge).to(device)
         print(graph_data.x.shape, graph_data.edge_index.shape)
         
-        gnn_model = GNNEncoder(input_dim=graph_data.x.shape[1],
-                               hidden_dim=args.hidden_dim, 
-                               output_dim=len(graph_data.label_name),
-                               n_layers=args.n_layers,
-                               gnn_type=args.gnn_type,
-                               dropout=args.dropout,
-                               use_softmax=args.use_softmax,
-                               batch_norm=args.batch_norm,
-                               residual_conn=args.residual_conn,
-                               jump_knowledge=args.jump_knowledge).to(device)
         if i == 0:
             trainable_params = sum(p.numel() for p in gnn_model.parameters() if p.requires_grad)
             print(f"[GNN] Number of parameters {trainable_params}")

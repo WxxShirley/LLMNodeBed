@@ -47,6 +47,16 @@ def normalize_adj_matrix(edge_index, num_nodes, device):
     return adj_normalized
 
 
+def plain_adj_matrix(edge_index, num_nodes, device=None):
+    indices = edge_index 
+    values = torch.FloatTensor([1.0] * len(edge_index[0])).to(edge_index.device)
+    coo = torch.sparse_coo_tensor(indices=indices, values=values, size=[num_nodes, num_nodes])
+    
+    if device is None:
+        device = edge_index.device 
+    return coo.to(device)
+
+
 def prepare_edge_list(edge_index, num_nodes):
     """Convert [torch.LongTensor] edge_index into [List] edge_list"""
     row, col = edge_index

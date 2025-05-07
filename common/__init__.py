@@ -8,3 +8,4 @@ from .descriptions import *
 from .ckpt import * 
 from .constant import *
 from .prompt import *
+from .hetero_gnn import HeteroGNNEncoder
