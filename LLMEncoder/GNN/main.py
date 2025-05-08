@@ -100,9 +100,6 @@ if __name__ == "__main__":
                                          n_layers=args.n_layers, 
                                          dropout=args.dropout).to(device)
             
-            # For LLM-based encoders, we use a smaller learning rate
-            if args.encoder_name in ["Qwen-3B", "Mistral-7B", "Qwen-7B", "Llama-8B"]:
-                args.learning_rate = 1e-3
         else:
             gnn_model = GNNEncoder(input_dim=graph_data.x.shape[1],
                                    hidden_dim=args.hidden_dim, 
