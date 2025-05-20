@@ -5,20 +5,19 @@
    <a href="https://huggingface.co/datasets/xxwu/LLMNodeBed/tree/main"><img src="https://img.shields.io/badge/🤗-Dataset-green" height="25"></a>
 </p>
 
-This repository is the official implementation for our ICML 2025 paper: **A Comprehensive Analysis on LLM-based Node Classification Algorithms**. It provides a standardized framework for evaluating LLM-based node classification methods, including **10 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. 
+This repository is the official implementation for our ICML 2025 paper: **When Do LLMs Help With Node Classification? A Comprehensive Analysis**. It provides a standardized framework for evaluating LLM-based node classification methods, including **14 datasets**, **8 LLM-based algorithms**, and **3 learning paradigms**. 
 
 
 > Please consider citing or giving a 🌟 if our repository is helpful to your work!
 
 
 ```bibtext
-@misc{wu2025llmnodebed,
-      title={A Comprehensive Analysis on LLM-based Node Classification Algorithms}, 
+@inproceedings{wu2025llmnodebed,
+      title={When Do LLMs Help With Node Classification? A Comprehensive Analysis}, 
       author={Xixi Wu and Yifei Shen and Fangzhou Ge and Caihua Shan and Yizhu Jiao and Xiangguo Sun and Hong Cheng},
       year={2025},
-      eprint={2502.00829},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
+      booktitle={International Conference on Machine Learning},
+      organization={PMLR},
       url={https://arxiv.org/abs/2502.00829}, 
 }
 ```
