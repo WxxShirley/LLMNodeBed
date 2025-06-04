@@ -36,6 +36,9 @@ python main.py --dataset=cora --encoder_name=Mistral-7B
 # More configurations for GNNs  
 python3 main.py --dataset=cora --encoder_name=Mistral-7B --gnn_type=GCN --n_layers=2 --hidden_dim=64 --dropout=0.5 
 python3 main.py --dataset=cora --encoder_name=Mistral-7B --gnn_type=SAGE --n_layers=2 --hidden_dim=64 --dropout=0.7 --batch_norm=0
+
+# Run H2GCN on heterophilic graphs like Cornell 
+python3 main.py --gnn_type=HeteroGNN  --dataset=cornell --encoder_name=Qwen-3B --learning_rate=5e-3  --patience=200 
 ```
 
 For additional arguments, refer to `main.py`. 

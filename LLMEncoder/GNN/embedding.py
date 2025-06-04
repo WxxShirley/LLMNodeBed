@@ -11,7 +11,7 @@ from common import get_cur_time, TextEncoder
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--dataset", type=str, default="cora", choices=['cora', "pubmed", "citeseer", "wikics", "arxiv", "instagram", "reddit", "computer", "photo", "history"])
+    parser.add_argument("--dataset", type=str, default="cora", choices=['cora', "pubmed", "citeseer", "wikics", "arxiv", "instagram", "reddit", "computer", "photo", "history", "cornell", "wisconsin", "texas", "washington"])
     parser.add_argument("--device", type=str, default="cuda:0")
     parser.add_argument("--encoder_name", type=str, default="SentenceBert", choices=["MiniLM", "SentenceBert", "e5-large", "roberta", "Qwen-3B", "Qwen-7B", "Mistral-7B", "Llama-8B"])
     parser.add_argument("--use_cls", type=int, default=1)

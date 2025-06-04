@@ -93,6 +93,7 @@ if __name__ == "__main__":
                                                 re_split=args.re_split)
         
         if args.gnn_type == "HeteroGNN": 
+            # H2GCN for heterophilic graphs
             graph_data.edge_index = plain_adj_matrix(graph_data.edge_index, graph_data.num_nodes).to(device)
             gnn_model = HeteroGNNEncoder(input_dim=graph_data.x.shape[1],
                                          hidden_dim=args.hidden_dim,
