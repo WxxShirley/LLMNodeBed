@@ -32,6 +32,9 @@ python3 explanation_llm.py --dataset=cora --llm=Mistral-7B --batch_size=16
 
 The generated explanation files will be automatically saved under the `results/TAPE/{llm}` folder, named as `{dataset}.json`.
 
+> 📢  
+> We have just uploaded the generated texts from both Mistral-7B and GPT-4o to [HuggingFace](https://huggingface.co/datasets/xxwu/LLMNodeBed). Feel free to download them and place them in the `main-folder/results/TAPE/{LLM}` directory. 
+
 
 ### Step 2 - Fine-tuning LMs based on Original and Generated Texts 
 
